@@ -9,7 +9,7 @@ const port = process.env.PORT || 8085;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173","https://eco-smart-bins.netlify.app"],
+    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
     credentials: true,
   })
 );
@@ -32,20 +32,20 @@ const dbConnect = async () => {
     const services = ecoSmartBins.collection("services");
     const products = ecoSmartBins.collection("products");
 
+    // products data for shop page
+    app.get("/products", async (req, res) => {
+      const item = req.body;
+      data = await products.find().toArray(item);
+      res.send(data);
+    });
 
-	// products data for shop page
-    app.get("/products", async (res, req) => {
-		const item = req.body;
-		data = await products.find().toArray(item);
-		req.send(data);
-	  });
-
-	// single product data for shop page
-    app.get("/products", async (res, req) => {
-		const item = req.body;
-		data = await products.find().toArray(item);
-		req.send(data);
-	  });
+    // single product data for shop page
+    app.get("/product/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await products.findOne(filter);
+      res.send(result);
+    });
 
     //service all data
     app.get("/services", async (res, req) => {
@@ -73,7 +73,7 @@ const dbConnect = async () => {
       const addData = await services.insertOne(data);
       req.send(addData);
     });
-	
+
     //delete a service
     app.delete("/services/:id", async (res, req) => {
       const id = res.params.id;
