@@ -9,7 +9,7 @@ const port = process.env.PORT || 8085;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173","https://eco-smart-bins.netlify.app"],
     credentials: true,
   })
 );
