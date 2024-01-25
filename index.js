@@ -104,6 +104,12 @@ const dbConnect = async () => {
 
 
    //  get reviews
+   app.post('/reviews',  async(req, res) =>{
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review)
+      res.send(result)
+  })
+
    app.get('/reviews', async(req, res) =>{
       const result = await reviewCollection.find().sort({date: -1}).toArray();
       res.send(result)
