@@ -37,6 +37,7 @@ const dbConnect = async () => {
     
     const products = ecoSmartBins.collection("products");
     const blogs = ecoSmartBins.collection("blogs");
+    const pickupReq = ecoSmartBins.collection("pickupReq");
 
     // products data for shop page
     app.get("/products", async (req, res) => {
@@ -126,6 +127,15 @@ const dbConnect = async () => {
       const result = await reviewCollection.find().sort({date: -1}).toArray();
       res.send(result)
   })
+
+
+  //
+  app.post("/pickupReq", async (req, res) => {
+   const data = req.body;
+   console.log(data)
+   const addData = await pickupReq.insertOne(data);
+   res.send(addData);
+ });
 
 
 
