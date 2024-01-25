@@ -30,6 +30,22 @@ const dbConnect = async () => {
     //  await client.connect();
     const ecoSmartBins = client.db("ecoSmartBins");
     const services = ecoSmartBins.collection("services");
+    const products = ecoSmartBins.collection("products");
+
+
+	// products data for shop page
+    app.get("/products", async (res, req) => {
+		const item = req.body;
+		data = await products.find().toArray(item);
+		req.send(data);
+	  });
+
+	// single product data for shop page
+    app.get("/products", async (res, req) => {
+		const item = req.body;
+		data = await products.find().toArray(item);
+		req.send(data);
+	  });
 
     //service all data
     app.get("/services", async (res, req) => {
@@ -43,6 +59,7 @@ const dbConnect = async () => {
       data = await services.find().toArray();
       req.send(data);
     });
+
     //service a data by id
     app.get("/services/:id", async (res, req) => {
       const id = res.params.id;
@@ -56,6 +73,7 @@ const dbConnect = async () => {
       const addData = await services.insertOne(data);
       req.send(addData);
     });
+	
     //delete a service
     app.delete("/services/:id", async (res, req) => {
       const id = res.params.id;
@@ -63,6 +81,7 @@ const dbConnect = async () => {
       const deleteData = await services.deleteOne(query);
       req.send(deleteData);
     });
+
     //update a service
     app.patch("/services/:id", async (res, req) => {
       const id = res.params.id;
