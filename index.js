@@ -30,6 +30,8 @@ const dbConnect = async () => {
     //  await client.connect();
     const ecoSmartBins = client.db("ecoSmartBins");
     const services = ecoSmartBins.collection("services");
+    const reviewCollection = ecoSmartBins.collection("reviews");
+    
 
     //service all data
     app.get("/services", async (res, req) => {
@@ -79,6 +81,18 @@ const dbConnect = async () => {
       const updateData = await services.updateOne(query, updateDoc, options);
       req.send(updateData);
     });
+
+
+
+
+   //  get reviews
+   app.get('/reviews', async(req, res) =>{
+      const result = await reviewCollection.find().sort({date: -1}).toArray();
+      res.send(result)
+  })
+
+
+
 
     console.log("DB Connected Successfully✅");
   } catch (error) {
