@@ -9,7 +9,7 @@ const port = process.env.PORT || 8085;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
     credentials: true,
   })
 );
@@ -32,44 +32,62 @@ const dbConnect = async () => {
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
     
+    const products = ecoSmartBins.collection("products");
+
+    // products data for shop page
+    app.get("/products", async (req, res) => {
+      const item = req.body;
+      data = await products.find().toArray(item);
+      res.send(data);
+    });
+
+    // single product data for shop page
+    app.get("/products", async (req, res) => {
+      const item = req.body;
+      data = await products.find().toArray(item);
+      res.send(data);
+    });
 
     //service all data
-    app.get("/services", async (res, req) => {
-      const limit = parseInt(res.query.q);
+    app.get("/services", async (req, res) => {
+      const limit = parseInt(req.query.q);
       let data;
       if (limit) {
         data = await services.find().limit(limit).toArray();
-        req.send(data);
+        res.send(data);
         return;
       }
       data = await services.find().toArray();
-      req.send(data);
+      res.send(data);
     });
+
     //service a data by id
-    app.get("/services/:id", async (res, req) => {
-      const id = res.params.id;
+    app.get("/services/:id", async (req, res) => {
+      const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const data = await services.findOne(query);
-      req.send(data);
+      res.send(data);
     });
     //service add new data
-    app.post("/services", async (res, req) => {
-      const data = res.body;
+    app.post("/services", async (req, res) => {
+      const data = req.body;
       const addData = await services.insertOne(data);
-      req.send(addData);
+      res.send(addData);
     });
+
     //delete a service
-    app.delete("/services/:id", async (res, req) => {
-      const id = res.params.id;
+    app.delete("/services/:id", async (req, res) => {
+      const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const deleteData = await services.deleteOne(query);
-      req.send(deleteData);
+      res.send(deleteData);
     });
+
     //update a service
-    app.patch("/services/:id", async (res, req) => {
-      const id = res.params.id;
+    app.patch("/services/:id", async (req,res) => {
+      const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const data = res.body;
+      const data = req.body;
       const updateDoc = {
         $set: {
           img: data.img,
@@ -79,7 +97,7 @@ const dbConnect = async () => {
       };
       const options = { upsert: true };
       const updateData = await services.updateOne(query, updateDoc, options);
-      req.send(updateData);
+      res.send(updateData);
     });
 
 
