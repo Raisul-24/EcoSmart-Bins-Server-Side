@@ -7,9 +7,10 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 8085;
 // middleware
+// , "https://eco-smart-bins.netlify.app"
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
+    origin: ["http://localhost:5173"],
     credentials: true,
   })
 );
@@ -31,6 +32,7 @@ const dbConnect = async () => {
     const ecoSmartBins = client.db("ecoSmartBins");
     const services = ecoSmartBins.collection("services");
     const products = ecoSmartBins.collection("products");
+    const blogs = ecoSmartBins.collection("blogs");
 
     // products data for shop page
     app.get("/products", async (req, res) => {
@@ -96,6 +98,20 @@ const dbConnect = async () => {
       const options = { upsert: true };
       const updateData = await services.updateOne(query, updateDoc, options);
       res.send(updateData);
+    });
+
+    //blogs all data
+    app.get("/blogs", async (req, res) => {
+      const data = await blogs.find().toArray();
+      res.send(data);
+    });
+
+    //blog a data by id
+    app.get("/blogs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = await blogs.findOne(query);
+      res.send(data);
     });
 
     console.log("DB Connected Successfully✅");
