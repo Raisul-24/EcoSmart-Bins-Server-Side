@@ -33,6 +33,8 @@ const dbConnect = async () => {
     const ecoSmartBins = client.db("ecoSmartBins");
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
+
+    const blogs = ecoSmartBins.collection("blogs");
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
 
