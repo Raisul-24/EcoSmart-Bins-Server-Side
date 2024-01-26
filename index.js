@@ -7,10 +7,13 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 8085;
 // middleware
+// , "https://eco-smart-bins.netlify.app"
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
-    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
+
+
+
     credentials: true,
   })
 );
@@ -31,15 +34,9 @@ const dbConnect = async () => {
     //  await client.connect();
     const ecoSmartBins = client.db("ecoSmartBins");
     const services = ecoSmartBins.collection("services");
+    const reviewCollection = ecoSmartBins.collection("reviews");
+    
     const products = ecoSmartBins.collection("products");
-    const myCart = ecoSmartBins.collection("myCart");
-
-	//  product stored on mongodb in my cart
-    app.post("/my-cart", async (req, res) => {
-		const order = req.body;
-		const result = await myCart.insertOne(order);
-		res.send(result);
-	  });
 
     // products data for shop page
     app.get("/products", async (req, res) => {
@@ -107,6 +104,46 @@ const dbConnect = async () => {
       const updateData = await services.updateOne(query, updateDoc, options);
       res.send(updateData);
     });
+
+    //blogs all data
+    app.get("/blogs", async (req, res) => {
+      const data = await blogs.find().toArray();
+      res.send(data);
+    });
+
+    //blog a data by id
+    app.get("/blogs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = await blogs.findOne(query);
+      res.send(data);
+    });
+
+
+
+   //  get reviews
+   app.post('/reviews',  async(req, res) =>{
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review)
+      res.send(result)
+  })
+
+   app.get('/reviews', async(req, res) =>{
+      const result = await reviewCollection.find().sort({date: -1}).toArray();
+      res.send(result)
+  })
+
+
+  //
+  app.post("/pickupReq", async (req, res) => {
+   const data = req.body;
+   console.log(data)
+   const addData = await pickupReq.insertOne(data);
+   res.send(addData);
+ });
+
+
+
 
     console.log("DB Connected Successfully✅");
   } catch (error) {
