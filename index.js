@@ -35,9 +35,9 @@ const dbConnect = async () => {
     const ecoSmartBins = client.db("ecoSmartBins");
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
-    
     const products = ecoSmartBins.collection("products");
 
+	
     // products data for shop page
     app.get("/products", async (req, res) => {
       const item = req.body;
