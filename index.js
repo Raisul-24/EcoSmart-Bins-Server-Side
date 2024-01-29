@@ -6,8 +6,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 8085;
-// middleware
-// , "https://eco-smart-bins.netlify.app"
+
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
@@ -33,10 +32,21 @@ const dbConnect = async () => {
     const ecoSmartBins = client.db("ecoSmartBins");
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
-
     const blogs = ecoSmartBins.collection("blogs");
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
+
+    app.get("/my-cart", async (req, res) => {
+      try {
+        const query = req.query;
+        const result = await myCart.find(query).toArray();
+        //console.log(result);
+        res.json(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
 
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
