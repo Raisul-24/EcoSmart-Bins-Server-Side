@@ -59,12 +59,30 @@ const dbConnect = async () => {
     });
 
     // single product data for shop page
-    app.get("/product/:id", async (req, res) => {
+    app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await products.findOne(filter);
       res.send(result);
     });
+
+      //update a product
+      app.patch("/products/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const data = req.body;
+        const updateDoc = {
+          $set: {
+            img: data.img,
+            title: data.title,
+            price: data.price,
+            description: data.description,
+          },
+        };
+        const options = { upsert: true };
+        const updateData = await products.updateOne(query, updateDoc, options);
+        res.send(updateData);
+      });
 
     //service all data
     app.get("/services", async (req, res) => {
