@@ -72,6 +72,12 @@ const dbConnect = async () => {
       res.send(result);
     });
 
+    // post products 
+    app.post('/products', async(req, res) =>{
+      const product = req.body;
+        const productData = await products.insertOne(product)
+        res.send(productData)
+    })
     // get products data for shop page
     app.get("/products", async (req, res) => {
       const item = req.body;
