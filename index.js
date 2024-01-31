@@ -36,6 +36,7 @@ const dbConnect = async () => {
     const blogs = ecoSmartBins.collection("blogs");
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
+    const showcaseCollection = ecoSmartBins.collection("showcase");
   
 
 
@@ -196,6 +197,14 @@ const dbConnect = async () => {
       console.log(data);
       const addData = await pickupReq.insertOne(data);
       res.send(addData);
+    });
+
+
+    // add showcase
+    app.post("/showcase", async (req, res) => {
+      const showcase = req.body;
+      const result = await showcaseCollection.insertOne(showcase);
+      res.send(result);
     });
 
     console.log("DB Connected Successfully✅");
