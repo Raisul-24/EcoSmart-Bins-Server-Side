@@ -83,6 +83,13 @@ const dbConnect = async () => {
         const updateData = await products.updateOne(query, updateDoc, options);
         res.send(updateData);
       });
+      // delete products
+      app.delete('/products/:id',  async(req, res) =>{
+        const id = req.params.id
+        const query = {_id: new ObjectId(id)}
+        const result = await products.deleteOne(query)
+        res.send(result)
+    })
 
     //service all data
     app.get("/services", async (req, res) => {
