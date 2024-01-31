@@ -1,13 +1,13 @@
 require("dotenv").config();
 const express = require("express");
-
+const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 8085;
+
 // middleware
-// , "https://eco-smart-bins.netlify.app"
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
@@ -16,6 +16,34 @@ app.use(
   })
 );
 app.use(express.json());
+
+// middleware for jwt token
+const verifyToken = (req, res, next) => {
+  console.log('inside verify token', req.headers);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: 'forbidden access' })
+  }
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: 'forbidden access' })
+    }
+    req.decoded = decoded;
+    next();
+  })
+}
+
+// use verify admin after verifyToken
+const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded.email;
+  const query = { email: email };
+  const user = await userCollection.findOne(query);
+  const isAdmin = user?.role === 'admin';
+  if (!isAdmin) {
+    return res.status(403).send({ message: 'forbidden access' });
+  }
+  next();
+}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -27,16 +55,57 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+
+
 const dbConnect = async () => {
   try {
     //  await client.connect();
     const ecoSmartBins = client.db("ecoSmartBins");
+    const users = ecoSmartBins.collection("users");
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
-
     const blogs = ecoSmartBins.collection("blogs");
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
+    const showcaseCollection = ecoSmartBins.collection("showcase");
+
+
+    // jwt related api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '1h'
+      });
+      res.send({ token });
+    });
+
+    app.get("/my-cart", async (req, res) => {
+      try {
+        const query = req.body;
+        const result = await myCart.find(query).toArray();
+        //console.log(result);
+        res.json(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+
+    // post user data for registration
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      // insert email if user doesn't exists.
+      console.log(user);
+      const query = { email: user.email }
+      const existingUser = await users.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
+
+      const result = await users.insertOne(user);
+      res.send(result)
+    });
 
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
@@ -46,10 +115,10 @@ const dbConnect = async () => {
     });
 
     // post products 
-    app.post('/products', async(req, res) =>{
+    app.post('/products', async (req, res) => {
       const product = req.body;
-        const productData = await products.insertOne(product)
-        res.send(productData)
+      const productData = await products.insertOne(product)
+      res.send(productData)
     })
     // get products data for shop page
     app.get("/products", async (req, res) => {
@@ -175,6 +244,14 @@ const dbConnect = async () => {
       console.log(data);
       const addData = await pickupReq.insertOne(data);
       res.send(addData);
+    });
+
+
+    // add showcase
+    app.post("/showcase", async (req, res) => {
+      const showcase = req.body;
+      const result = await showcaseCollection.insertOne(showcase);
+      res.send(result);
     });
 
     console.log("DB Connected Successfully✅");
