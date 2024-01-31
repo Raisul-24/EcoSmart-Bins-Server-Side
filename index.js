@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-
+//const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -26,6 +26,23 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+//middlewares for token verify
+const verifyToken = (req, res, next) => {
+  console.log("inside the verifyToken", req.headers.authorization);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      res.status(401).send({ message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 const dbConnect = async () => {
   try {
     //  await client.connect();
@@ -41,7 +58,7 @@ const dbConnect = async () => {
 
     app.get("/my-cart", async (req, res) => {
       try {
-        const query = req.query;
+        const query = req.body;
         const result = await myCart.find(query).toArray();
         //console.log(result);
         res.json(result);
@@ -76,8 +93,8 @@ const dbConnect = async () => {
     // post products 
     app.post('/products', async (req, res) => {
       const product = req.body;
-      const productData = await products.insertOne(product)
-      res.send(productData)
+        const productData = await products.insertOne(product)
+        res.send(productData)
     })
     // get products data for shop page
     app.get("/products", async (req, res) => {
