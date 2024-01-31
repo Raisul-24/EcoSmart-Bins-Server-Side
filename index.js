@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-
+//const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -72,12 +72,12 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    // post products 
-    app.post('/products', async(req, res) =>{
+    // post products
+    app.post("/products", async (req, res) => {
       const product = req.body;
-        const productData = await products.insertOne(product)
-        res.send(productData)
-    })
+      const productData = await products.insertOne(product);
+      res.send(productData);
+    });
     // get products data for shop page
     app.get("/products", async (req, res) => {
       const item = req.body;
