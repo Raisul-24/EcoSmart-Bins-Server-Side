@@ -30,11 +30,14 @@ const dbConnect = async () => {
   try {
     //  await client.connect();
     const ecoSmartBins = client.db("ecoSmartBins");
+    const users = ecoSmartBins.collection("users");
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
     const blogs = ecoSmartBins.collection("blogs");
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
+  
+
 
     app.get("/my-cart", async (req, res) => {
       try {
@@ -48,6 +51,21 @@ const dbConnect = async () => {
       }
     });
 
+    // post user data for registration
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      // insert email if user doesn't exists.
+      console.log(user);
+      const query = { email: user.email }
+      const existingUser = await users.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
+
+      const result = await users.insertOne(user);
+      res.send(result)
+    });
+    
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
       const item = req.body;
@@ -56,10 +74,10 @@ const dbConnect = async () => {
     });
 
     // post products 
-    app.post('/products', async(req, res) =>{
+    app.post('/products', async (req, res) => {
       const product = req.body;
-        const productData = await products.insertOne(product)
-        res.send(productData)
+      const productData = await products.insertOne(product)
+      res.send(productData)
     })
     // get products data for shop page
     app.get("/products", async (req, res) => {
@@ -76,23 +94,23 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-      //update a product
-      app.patch("/products/:id", async (req, res) => {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const data = req.body;
-        const updateDoc = {
-          $set: {
-            img: data.img,
-            title: data.title,
-            price: data.price,
-            description: data.description,
-          },
-        };
-        const options = { upsert: true };
-        const updateData = await products.updateOne(query, updateDoc, options);
-        res.send(updateData);
-      });
+    //update a product
+    app.patch("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = req.body;
+      const updateDoc = {
+        $set: {
+          img: data.img,
+          title: data.title,
+          price: data.price,
+          description: data.description,
+        },
+      };
+      const options = { upsert: true };
+      const updateData = await products.updateOne(query, updateDoc, options);
+      res.send(updateData);
+    });
 
     //service all data
     app.get("/services", async (req, res) => {
