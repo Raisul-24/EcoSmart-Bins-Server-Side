@@ -1,20 +1,48 @@
 require("dotenv").config();
 const express = require("express");
-
+const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 8085;
 
+// middleware
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app", "http://localhost:5174"],
-
     credentials: true,
   })
 );
 app.use(express.json());
+
+// middleware for jwt token
+const verifyToken = (req, res, next) => {
+  console.log("inside verify token", req.headers);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "forbidden access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "forbidden access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
+// use verify admin after verifyToken
+const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded.email;
+  const query = { email: email };
+  const user = await userCollection.findOne(query);
+  const isAdmin = user?.role === "admin";
+  if (!isAdmin) {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -26,6 +54,7 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
 const dbConnect = async () => {
   try {
     //  await client.connect();
@@ -37,13 +66,12 @@ const dbConnect = async () => {
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
-    const artCollection = ecoSmartBins.collection("artworks");
   
 
 
     app.get("/my-cart", async (req, res) => {
       try {
-        const query = req.query;
+        const query = req.body;
         const result = await myCart.find(query).toArray();
         //console.log(result);
         res.json(result);
@@ -54,20 +82,20 @@ const dbConnect = async () => {
     });
 
     // post user data for registration
-    app.post('/users', async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
       // insert email if user doesn't exists.
       console.log(user);
-      const query = { email: user.email }
+      const query = { email: user.email };
       const existingUser = await users.findOne(query);
       if (existingUser) {
-        return res.send({ message: 'user already exists', insertedId: null })
+        return res.send({ message: "user already exists", insertedId: null });
       }
 
       const result = await users.insertOne(user);
-      res.send(result)
+      res.send(result);
     });
-    
+
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
       const item = req.body;
@@ -75,12 +103,12 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    // post products 
-    app.post('/products', async (req, res) => {
+    // post products
+    app.post("/products", async (req, res) => {
       const product = req.body;
-      const productData = await products.insertOne(product)
-      res.send(productData)
-    })
+      const productData = await products.insertOne(product);
+      res.send(productData);
+    });
     // get products data for shop page
     app.get("/products", async (req, res) => {
       const item = req.body;
@@ -112,6 +140,13 @@ const dbConnect = async () => {
       const options = { upsert: true };
       const updateData = await products.updateOne(query, updateDoc, options);
       res.send(updateData);
+    });
+    // delete products
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await products.deleteOne(query);
+      res.send(result);
     });
 
     //service all data
@@ -199,7 +234,6 @@ const dbConnect = async () => {
       const addData = await pickupReq.insertOne(data);
       res.send(addData);
     });
-
 
     // add showcase
     app.post("/showcase", async (req, res) => {
