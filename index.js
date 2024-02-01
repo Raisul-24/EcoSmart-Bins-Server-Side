@@ -208,6 +208,18 @@ const dbConnect = async () => {
       res.send(result);
     });
 
+    app.get("/showcase", async (req, res) => {
+      const data = await showcaseCollection.find().toArray();
+      res.send(data);
+    });
+
+    app.delete("/showcase/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deleteData = await showcaseCollection.deleteOne(query);
+      res.send(deleteData);
+    });
+
     // art work
     app.get("/artworks", async (req, res) => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
