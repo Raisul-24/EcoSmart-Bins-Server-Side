@@ -9,7 +9,7 @@ const port = process.env.PORT || 8085;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
+    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app", "http://localhost:5174"],
 
     credentials: true,
   })
@@ -37,6 +37,7 @@ const dbConnect = async () => {
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
+    const artCollection = ecoSmartBins.collection("artworks");
   
 
 
@@ -204,6 +205,12 @@ const dbConnect = async () => {
     app.post("/showcase", async (req, res) => {
       const showcase = req.body;
       const result = await showcaseCollection.insertOne(showcase);
+      res.send(result);
+    });
+
+    // art work
+    app.get("/artworks", async (req, res) => {
+      const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
 
