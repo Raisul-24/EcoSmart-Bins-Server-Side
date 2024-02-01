@@ -10,7 +10,7 @@ const port = process.env.PORT || 8085;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
+    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app", "http://localhost:5174"],
     credentials: true,
   })
 );
@@ -66,15 +66,8 @@ const dbConnect = async () => {
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
+  
 
-    // jwt related api
-    app.post("/jwt", async (req, res) => {
-      const user = req.body;
-      const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
-      });
-      res.send({ token });
-    });
 
     app.get("/my-cart", async (req, res) => {
       try {
@@ -246,6 +239,24 @@ const dbConnect = async () => {
     app.post("/showcase", async (req, res) => {
       const showcase = req.body;
       const result = await showcaseCollection.insertOne(showcase);
+      res.send(result);
+    });
+
+    app.get("/showcase", async (req, res) => {
+      const data = await showcaseCollection.find().toArray();
+      res.send(data);
+    });
+
+    app.delete("/showcase/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deleteData = await showcaseCollection.deleteOne(query);
+      res.send(deleteData);
+    });
+
+    // art work
+    app.get("/artworks", async (req, res) => {
+      const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
 
