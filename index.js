@@ -258,7 +258,13 @@ const dbConnect = async () => {
     // art work
     app.post("/artworks", async (req, res) => {
       const data = req.body;
+      console.log(data);
       const result = await artCollection.insertOne(data);
+      if (result){
+        const id = data.oldId
+        const query = {_id: new ObjectId(id)}
+        await showcaseCollection.deleteOne(query)
+      }
       res.send(result);
     });
 
