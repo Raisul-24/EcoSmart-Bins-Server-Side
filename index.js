@@ -17,32 +17,32 @@ app.use(
 app.use(express.json());
 
 // middleware for jwt token
-const verifyToken = (req, res, next) => {
-  console.log("inside verify token", req.headers);
-  if (!req.headers.authorization) {
-    return res.status(401).send({ message: "forbidden access" });
-  }
-  const token = req.headers.authorization.split(" ")[1];
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: "forbidden access" });
-    }
-    req.decoded = decoded;
-    next();
-  });
-};
+// const verifyToken = (req, res, next) => {
+//   console.log("inside verify token", req.headers);
+//   if (!req.headers.authorization) {
+//     return res.status(401).send({ message: "forbidden access" });
+//   }
+//   const token = req.headers.authorization.split(" ")[1];
+//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+//     if (err) {
+//       return res.status(401).send({ message: "forbidden access" });
+//     }
+//     req.decoded = decoded;
+//     next();
+//   });
+// };
 
 // use verify admin after verifyToken
-const verifyAdmin = async (req, res, next) => {
-  const email = req.decoded.email;
-  const query = { email: email };
-  const user = await userCollection.findOne(query);
-  const isAdmin = user?.role === "admin";
-  if (!isAdmin) {
-    return res.status(403).send({ message: "forbidden access" });
-  }
-  next();
-};
+// const verifyAdmin = async (req, res, next) => {
+//   const email = req.decoded.email;
+//   const query = { email: email };
+//   const user = await userCollection.findOne(query);
+//   const isAdmin = user?.role === "admin";
+//   if (!isAdmin) {
+//     return res.status(403).send({ message: "forbidden access" });
+//   }
+//   next();
+// };
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -66,6 +66,7 @@ const dbConnect = async () => {
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
+    const artCollection = ecoSmartBins.collection("artworks");
   
 
 
@@ -255,6 +256,12 @@ const dbConnect = async () => {
     });
 
     // art work
+    app.post("/artworks", async (req, res) => {
+      const data = req.body;
+      const result = await artCollection.insertOne(data);
+      res.send(result);
+    });
+
     app.get("/artworks", async (req, res) => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
