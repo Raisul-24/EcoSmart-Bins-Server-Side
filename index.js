@@ -3,14 +3,24 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
 const app = express();
 const port = process.env.PORT || 8085;
+const port2 = process.env.PORT || 3000;
+
+const { Server } = require("socket.io");
+const { createServer } = require("http");
+
+const server = createServer(app);
+const io = new Server(server);
 
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://eco-smart-bins.netlify.app",
+    ],
     credentials: true,
   })
 );
@@ -74,6 +84,23 @@ const dbConnect = async () => {
         expiresIn: "1h",
       });
       res.send({ token });
+    });
+
+    //change status value
+    app.patch("/my-cart/:id", async (req, res) => {
+      const query = req.body;
+      //console.log("query", query);
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          status: query?.status,
+        },
+      };
+      console.log(update);
+      const result = await myCart.updateOne(filter, update);
+      res.send(result);
     });
 
     app.get("/my-cart", async (req, res) => {
@@ -255,6 +282,23 @@ const dbConnect = async () => {
   }
 };
 
+//socket.io connection conformation
+io.on("connection", (socket) => {
+  console.log("User Connected", socket.id);
+
+  socket.on("message", ({ room, message }) => {
+    console.log({ room, message });
+    socket.to(room).emit("receive-message", message);
+  });
+  socket.on("join-room", (room) => {
+    socket.join(room);
+    console.log(`User joined room ${room}`);
+  });
+  socket.on("disconnect", () => {
+    console.log("User Disconnected", socket.id);
+  });
+});
+
 dbConnect();
 app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
@@ -262,4 +306,8 @@ app.get("/", (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+});
+
+server.listen(port2, () => {
+  console.log(`Server is running on port ${port2}`);
 });
