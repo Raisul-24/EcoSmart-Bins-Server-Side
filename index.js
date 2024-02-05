@@ -3,14 +3,25 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
 const app = express();
 const port = process.env.PORT || 8085;
+const port2 = process.env.PORT || 3000;
+
+const { Server } = require("socket.io");
+const { createServer } = require("http");
+
+const server = createServer(app);
+const io = new Server(server);
 
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://eco-smart-bins.netlify.app"],
+
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://eco-smart-bins.netlify.app",
+    ],
 
     credentials: true,
   })
@@ -18,32 +29,32 @@ app.use(
 app.use(express.json());
 
 // middleware for jwt token
-const verifyToken = (req, res, next) => {
-  console.log('inside verify token', req.headers);
-  if (!req.headers.authorization) {
-    return res.status(401).send({ message: 'forbidden access' })
-  }
-  const token = req.headers.authorization.split(' ')[1];
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: 'forbidden access' })
-    }
-    req.decoded = decoded;
-    next();
-  })
-}
+// const verifyToken = (req, res, next) => {
+//   console.log("inside verify token", req.headers);
+//   if (!req.headers.authorization) {
+//     return res.status(401).send({ message: "forbidden access" });
+//   }
+//   const token = req.headers.authorization.split(" ")[1];
+//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+//     if (err) {
+//       return res.status(401).send({ message: "forbidden access" });
+//     }
+//     req.decoded = decoded;
+//     next();
+//   });
+// };
 
 // use verify admin after verifyToken
-const verifyAdmin = async (req, res, next) => {
-  const email = req.decoded.email;
-  const query = { email: email };
-  const user = await userCollection.findOne(query);
-  const isAdmin = user?.role === 'admin';
-  if (!isAdmin) {
-    return res.status(403).send({ message: 'forbidden access' });
-  }
-  next();
-}
+// const verifyAdmin = async (req, res, next) => {
+//   const email = req.decoded.email;
+//   const query = { email: email };
+//   const user = await userCollection.findOne(query);
+//   const isAdmin = user?.role === "admin";
+//   if (!isAdmin) {
+//     return res.status(403).send({ message: "forbidden access" });
+//   }
+//   next();
+// };
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -56,8 +67,6 @@ const client = new MongoClient(uri, {
   },
 });
 
-
-
 const dbConnect = async () => {
   try {
     //  await client.connect();
@@ -69,15 +78,25 @@ const dbConnect = async () => {
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
+    const artCollection = ecoSmartBins.collection("artworks");
+  
 
 
-    // jwt related api
-    app.post('/jwt', async (req, res) => {
-      const user = req.body;
-      const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: '1h'
-      });
-      res.send({ token });
+    //change status value
+    app.patch("/my-cart/:id", async (req, res) => {
+      const query = req.body;
+      //console.log("query", query);
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          status: query?.status,
+        },
+      };
+      console.log(update);
+      const result = await myCart.updateOne(filter, update);
+      res.send(result);
     });
 
     app.get("/my-cart", async (req, res) => {
@@ -93,18 +112,18 @@ const dbConnect = async () => {
     });
 
     // post user data for registration
-    app.post('/users', async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
       // insert email if user doesn't exists.
       console.log(user);
-      const query = { email: user.email }
+      const query = { email: user.email };
       const existingUser = await users.findOne(query);
       if (existingUser) {
-        return res.send({ message: 'user already exists', insertedId: null })
+        return res.send({ message: "user already exists", insertedId: null });
       }
 
       const result = await users.insertOne(user);
-      res.send(result)
+      res.send(result);
     });
 
     // get cart data for my cart page
@@ -114,12 +133,12 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    // post products 
-    app.post('/products', async (req, res) => {
+    // post products
+    app.post("/products", async (req, res) => {
       const product = req.body;
-      const productData = await products.insertOne(product)
-      res.send(productData)
-    })
+      const productData = await products.insertOne(product);
+      res.send(productData);
+    });
     // get products data for shop page
     app.get("/products", async (req, res) => {
       const item = req.body;
@@ -135,30 +154,30 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-      //update a product
-      app.patch("/products/:id", async (req, res) => {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const data = req.body;
-        const updateDoc = {
-          $set: {
-            img: data.img,
-            title: data.title,
-            price: data.price,
-            description: data.description,
-          },
-        };
-        const options = { upsert: true };
-        const updateData = await products.updateOne(query, updateDoc, options);
-        res.send(updateData);
-      });
-      // delete products
-      app.delete('/products/:id',  async(req, res) =>{
-        const id = req.params.id
-        const query = {_id: new ObjectId(id)}
-        const result = await products.deleteOne(query)
-        res.send(result)
-    })
+    //update a product
+    app.patch("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = req.body;
+      const updateDoc = {
+        $set: {
+          img: data.img,
+          title: data.title,
+          price: data.price,
+          description: data.description,
+        },
+      };
+      const options = { upsert: true };
+      const updateData = await products.updateOne(query, updateDoc, options);
+      res.send(updateData);
+    });
+    // delete products
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await products.deleteOne(query);
+      res.send(result);
+    });
 
     //service all data
     app.get("/services", async (req, res) => {
@@ -246,11 +265,40 @@ const dbConnect = async () => {
       res.send(addData);
     });
 
-
     // add showcase
     app.post("/showcase", async (req, res) => {
       const showcase = req.body;
       const result = await showcaseCollection.insertOne(showcase);
+      res.send(result);
+    });
+
+    app.get("/showcase", async (req, res) => {
+      const data = await showcaseCollection.find().toArray();
+      res.send(data);
+    });
+
+    app.delete("/showcase/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deleteData = await showcaseCollection.deleteOne(query);
+      res.send(deleteData);
+    });
+
+    // art work
+    app.post("/artworks", async (req, res) => {
+      const data = req.body;
+      console.log(data);
+      const result = await artCollection.insertOne(data);
+      if (result){
+        const id = data.oldId
+        const query = {_id: new ObjectId(id)}
+        await showcaseCollection.deleteOne(query)
+      }
+      res.send(result);
+    });
+
+    app.get("/artworks", async (req, res) => {
+      const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
 
@@ -260,6 +308,23 @@ const dbConnect = async () => {
   }
 };
 
+//socket.io connection conformation
+io.on("connection", (socket) => {
+  console.log("User Connected", socket.id);
+
+  socket.on("message", ({ room, message }) => {
+    console.log({ room, message });
+    socket.to(room).emit("receive-message", message);
+  });
+  socket.on("join-room", (room) => {
+    socket.join(room);
+    console.log(`User joined room ${room}`);
+  });
+  socket.on("disconnect", () => {
+    console.log("User Disconnected", socket.id);
+  });
+});
+
 dbConnect();
 app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
@@ -267,4 +332,8 @@ app.get("/", (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+});
+
+server.listen(port2, () => {
+  console.log(`Server is running on port ${port2}`);
 });
