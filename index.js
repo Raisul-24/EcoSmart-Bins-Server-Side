@@ -115,7 +115,6 @@ const dbConnect = async () => {
     app.post("/users", async (req, res) => {
       const user = req.body;
       // insert email if user doesn't exists.
-      console.log(user);
       const query = { email: user.email };
       const existingUser = await users.findOne(query);
       if (existingUser) {
