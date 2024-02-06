@@ -52,7 +52,7 @@ const dbConnect = async () => {
       });
       res.send({ token });
     });
-    // middlewares 
+    // middleware for verifying jwt
     const verifyToken = (req, res, next) => {
       console.log('inside verify token', req.headers.authorization);
       if (!req.headers.authorization) {
@@ -67,6 +67,19 @@ const dbConnect = async () => {
         next();
       })
     }
+
+    // use verify admin after verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await users.findOne(query);
+      const isAdmin = user?.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+
 
     //change status value
     app.patch("/my-cart/:id", async (req, res) => {
