@@ -7,16 +7,15 @@ const app = express();
 const port = process.env.PORT || 8085;
 const port2 = process.env.PORT || 3000;
 
-const { Server } = require("socket.io");
-const { createServer } = require("http");
-
-const server = createServer(app);
-const io = new Server(server);
+//const { Server } = require("socket.io");
+//const { createServer } = require("http");
+//
+//const server = createServer(app);
+//const io = new Server(server);
 
 // middleware
 app.use(
   cors({
-
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
@@ -29,32 +28,32 @@ app.use(
 app.use(express.json());
 
 // middleware for jwt token
-// const verifyToken = (req, res, next) => {
-//   console.log("inside verify token", req.headers);
-//   if (!req.headers.authorization) {
-//     return res.status(401).send({ message: "forbidden access" });
-//   }
-//   const token = req.headers.authorization.split(" ")[1];
-//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-//     if (err) {
-//       return res.status(401).send({ message: "forbidden access" });
-//     }
-//     req.decoded = decoded;
-//     next();
-//   });
-// };
+const verifyToken = (req, res, next) => {
+  console.log("inside verify token", req.headers);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "forbidden access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "forbidden access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 // use verify admin after verifyToken
-// const verifyAdmin = async (req, res, next) => {
-//   const email = req.decoded.email;
-//   const query = { email: email };
-//   const user = await userCollection.findOne(query);
-//   const isAdmin = user?.role === "admin";
-//   if (!isAdmin) {
-//     return res.status(403).send({ message: "forbidden access" });
-//   }
-//   next();
-// };
+const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded.email;
+  const query = { email: email };
+  const user = await userCollection.findOne(query);
+  const isAdmin = user?.role === "admin";
+  if (!isAdmin) {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -79,8 +78,15 @@ const dbConnect = async () => {
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
-  
 
+    // jwt related api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
 
     //change status value
     app.patch("/my-cart/:id", async (req, res) => {
@@ -88,7 +94,7 @@ const dbConnect = async () => {
       //console.log("query", query);
       const id = req.params.id;
       console.log(id);
-      const filter = { _id: new ObjectId(id) };
+      const filter = { _id: id };
       const update = {
         $set: {
           status: query?.status,
@@ -99,9 +105,13 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    app.get("/my-cart", async (req, res) => {
+    app.get("/my-cart", verifyToken, async (req, res) => {
       try {
-        const query = req.body;
+        let query = {};
+        if (req.query?.email) {
+          query = { email: req.query.email };
+        }
+        //console.log(query);
         const result = await myCart.find(query).toArray();
         //console.log(result);
         res.json(result);
@@ -289,10 +299,10 @@ const dbConnect = async () => {
       const data = req.body;
       console.log(data);
       const result = await artCollection.insertOne(data);
-      if (result){
-        const id = data.oldId
-        const query = {_id: new ObjectId(id)}
-        await showcaseCollection.deleteOne(query)
+      if (result) {
+        const id = data.oldId;
+        const query = { _id: new ObjectId(id) };
+        await showcaseCollection.deleteOne(query);
       }
       res.send(result);
     });
@@ -309,21 +319,21 @@ const dbConnect = async () => {
 };
 
 //socket.io connection conformation
-io.on("connection", (socket) => {
-  console.log("User Connected", socket.id);
-
-  socket.on("message", ({ room, message }) => {
-    console.log({ room, message });
-    socket.to(room).emit("receive-message", message);
-  });
-  socket.on("join-room", (room) => {
-    socket.join(room);
-    console.log(`User joined room ${room}`);
-  });
-  socket.on("disconnect", () => {
-    console.log("User Disconnected", socket.id);
-  });
-});
+//io.on("connection", (socket) => {
+//  console.log("User Connected", socket.id);
+//
+//  socket.on("message", ({ room, message }) => {
+//    console.log({ room, message });
+//    socket.to(room).emit("receive-message", message);
+//  });
+//  socket.on("join-room", (room) => {
+//    socket.join(room);
+//    console.log(`User joined room ${room}`);
+//  });
+//  socket.on("disconnect", () => {
+//    console.log("User Disconnected", socket.id);
+//  });
+//});
 
 dbConnect();
 app.get("/", (req, res) => {
@@ -334,6 +344,6 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-server.listen(port2, () => {
-  console.log(`Server is running on port ${port2}`);
-});
+//server.listen(port2, () => {
+//  console.log(`Server is running on port ${port2}`);
+//});
