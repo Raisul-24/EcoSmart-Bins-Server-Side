@@ -14,7 +14,17 @@ const port2 = process.env.PORT || 3000;
 //const io = new Server(server);
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://eco-smart-bins.netlify.app",
+    ],
+
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 
@@ -123,7 +133,6 @@ const dbConnect = async () => {
     app.post("/users", async (req, res) => {
       const user = req.body;
       // insert email if user doesn't exists.
-      console.log(user);
       const query = { email: user.email };
       const existingUser = await users.findOne(query);
       if (existingUser) {
@@ -132,6 +141,11 @@ const dbConnect = async () => {
 
       const result = await users.insertOne(user);
       res.send(result);
+    });
+    // get user data
+    app.get("/users", async(req, res) => {
+      const userData = await users.find().toArray()
+      res.send(userData)
     });
 
     // get cart data for my cart page
