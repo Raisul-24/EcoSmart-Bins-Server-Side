@@ -29,9 +29,9 @@ app.use(express.json());
 
 // middleware for jwt token
 const verifyToken = (req, res, next) => {
-  console.log("inside verify token", req.headers);
+  //  console.log("inside verify token", req.headers);
   if (!req.headers.authorization) {
-    return res.status(401).send({ message: "forbidden access" });
+    return res.status(401).send({ message: "forbidden access1" });
   }
   const token = req.headers.authorization.split(" ")[1];
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
@@ -83,7 +83,7 @@ const dbConnect = async () => {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "1y",
       });
       res.send({ token });
     });
