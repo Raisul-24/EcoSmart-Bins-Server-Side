@@ -16,7 +16,6 @@ const io = new Server(server);
 // middleware
 app.use(
   cors({
-
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
@@ -79,8 +78,6 @@ const dbConnect = async () => {
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
-  
-
 
     //change status value
     app.patch("/my-cart/:id", async (req, res) => {
@@ -123,6 +120,11 @@ const dbConnect = async () => {
 
       const result = await users.insertOne(user);
       res.send(result);
+    });
+    // get user data
+    app.get("/users", async(req, res) => {
+      const userData = await users.find().toArray()
+      res.send(userData)
     });
 
     // get cart data for my cart page
@@ -288,10 +290,10 @@ const dbConnect = async () => {
       const data = req.body;
       console.log(data);
       const result = await artCollection.insertOne(data);
-      if (result){
-        const id = data.oldId
-        const query = {_id: new ObjectId(id)}
-        await showcaseCollection.deleteOne(query)
+      if (result) {
+        const id = data.oldId;
+        const query = { _id: new ObjectId(id) };
+        await showcaseCollection.deleteOne(query);
       }
       res.send(result);
     });
