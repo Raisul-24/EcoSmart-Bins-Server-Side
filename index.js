@@ -151,6 +151,7 @@ const dbConnect = async () => {
       const result = await users.updateOne(filter, update);
       res.send(result);
     });
+    
     //delete user
     app.delete("/user/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
