@@ -151,7 +151,7 @@ const dbConnect = async () => {
       }
     });
     // get all users
-    app.get("/users", verifyToken, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const result = await users.find().toArray();
       res.send(result);
     });
@@ -169,7 +169,7 @@ const dbConnect = async () => {
       res.send(result);
     });
     //change user role
-    app.patch("/user/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.patch("/user/:id", async (req, res) => {
       const query = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -181,9 +181,9 @@ const dbConnect = async () => {
       const result = await users.updateOne(filter, update);
       res.send(result);
     });
-    
+
     //delete user
-    app.delete("/user/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.delete("/user/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await users.deleteOne(query);
