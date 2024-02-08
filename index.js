@@ -5,26 +5,14 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 8085;
-const port2 = process.env.PORT || 3000;
+const http = require("http");
+const socketIO = require("socket.io");
 
-//const { Server } = require("socket.io");
-//const { createServer } = require("http");
-//
-//const server = createServer(app);
-//const io = new Server(server);
+const server = http.createServer(app);
+const io = socketIO(server);
 
 // middleware
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://eco-smart-bins.netlify.app",
-    ],
-
-    credentials: true,
-  })
-);
+app.use(cors());
 app.use(express.json());
 
 
@@ -80,7 +68,6 @@ const dbConnect = async () => {
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
-    const pickupReq = ecoSmartBins.collection("pickupReq");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -136,7 +123,7 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    app.get("/my-cart", verifyToken, async (req, res) => {
+    app.get("/my-cart", async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
@@ -151,15 +138,16 @@ const dbConnect = async () => {
         res.status(500).send("Internal Server Error");
       }
     });
+
+    // get all teams
+    app.get("/teams", async (req, res) => {
+      const result = await teams.find().toArray();
+      res.send(result);
+    });
+
     // get all users
     app.get("/users", async (req, res) => {
       const result = await users.find().toArray();
-      res.send(result);
-    });
-    //get a user
-    app.get("/users/:email", async (req, res) => {
-      const email = req.params.email;
-      const result = await users.findOne({ email });
       res.send(result);
     });
     // post user data for registration
@@ -416,7 +404,7 @@ const dbConnect = async () => {
     app.post("/artworks", async (req, res) => {
       const data = req.body;
       console.log(data);
-      const result = await artCollection.insertOne(data);
+      const result = await team.insertOne(data);
       if (result) {
         const id = data.oldId;
         const query = { _id: new ObjectId(id) };
@@ -436,32 +424,11 @@ const dbConnect = async () => {
   }
 };
 
-//socket.io connection conformation
-//io.on("connection", (socket) => {
-//  console.log("User Connected", socket.id);
-//
-//  socket.on("message", ({ room, message }) => {
-//    console.log({ room, message });
-//    socket.to(room).emit("receive-message", message);
-//  });
-//  socket.on("join-room", (room) => {
-//    socket.join(room);
-//    console.log(`User joined room ${room}`);
-//  });
-//  socket.on("disconnect", () => {
-//    console.log("User Disconnected", socket.id);
-//  });
-//});
-
 dbConnect();
 app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-//server.listen(port2, () => {
-//  console.log(`Server is running on port ${port2}`);
-//});
