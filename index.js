@@ -15,6 +15,8 @@ const io = socketIO(server);
 app.use(cors());
 app.use(express.json());
 
+<<<<<<<<< Temporary merge branch 1
+=========
 // middleware for jwt token
 const verifyToken = (req, res, next) => {
   //  console.log("inside verify token", req.headers);
@@ -43,6 +45,7 @@ const verifyAdmin = async (req, res, next) => {
   next();
 };
 
+>>>>>>>>> Temporary merge branch 2
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -66,7 +69,6 @@ const dbConnect = async () => {
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
-    const teams = ecoSmartBins.collection("teams");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -149,7 +151,6 @@ const dbConnect = async () => {
       const result = await users.find().toArray();
       res.send(result);
     });
-
     // post user data for registration
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -316,10 +317,67 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    //
+    //pickUp get data
+    app.get("/pickupReq", async (req, res) => {
+      const result = await pickupReq.find().sort({ date: -1 }).toArray();
+      res.send(result);
+    });
+    //get all pickup data
+    app.get("/pickupReqAll", async (req, res) => {
+      const result = await pickupReq
+        .find({ workerEmail: null })
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
+    //update worker
+    app.patch("/pickupReq/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = req.body;
+      const updateDoc = {
+        $set: {
+          workerEmail: data?.email,
+        },
+      };
+      const updateData = await pickupReq.updateOne(query, updateDoc);
+      res.send(updateData);
+    });
+    //get data base to status
+    app.get("/pickupReq/:email", async (req, res) => {
+      const workerEmail = req.params.email
+      const status = req.query.status
+      const result = await pickupReq
+        .find({ workerEmail,status  })
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
+    //status update
+    app.patch("/statusUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = req.body;
+      const updateDoc = {
+        $set: {
+          status: data?.status,
+        },
+      };
+      const updateData = await pickupReq.updateOne(query, updateDoc);
+      res.send(updateData);
+    });
+    // pickUp Req post
     app.post("/pickupReq", async (req, res) => {
       const data = req.body;
-      console.log(data);
+      // console.log(data);
+      const query = { email: data?.email };
+      const isExist = await pickupReq.findOne(query);
+      if (isExist) {
+        return res.send({
+          message: "request already exists",
+          insertedId: null,
+        });
+      }
       const addData = await pickupReq.insertOne(data);
       res.send(addData);
     });
