@@ -15,8 +15,7 @@ const io = socketIO(server);
 app.use(cors());
 app.use(express.json());
 
-<<<<<<<<< Temporary merge branch 1
-=========
+
 // middleware for jwt token
 const verifyToken = (req, res, next) => {
   //  console.log("inside verify token", req.headers);
@@ -45,7 +44,7 @@ const verifyAdmin = async (req, res, next) => {
   next();
 };
 
->>>>>>>>> Temporary merge branch 2
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
