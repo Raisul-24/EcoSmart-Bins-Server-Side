@@ -12,9 +12,18 @@ const server = http.createServer(app);
 const io = socketIO(server);
 
 // middleware
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5173",
+      "https://eco-smart-bins.netlify.app",
+    ],
 
+    credentials: true,
+  })
+);
+app.use(express.json());
 
 // // middleware for jwt token
 // const verifyToken = (req, res, next) => {
@@ -43,7 +52,6 @@ app.use(express.json());
 //   }
 //   next();
 // };
-
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -78,7 +86,7 @@ const dbConnect = async () => {
       });
       res.send({ token });
     });
-    
+
     // middleware for verifying jwt
     const verifyToken = (req, res, next) => {
       // console.log("inside verify token", req.headers.authorization);
