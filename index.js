@@ -151,7 +151,7 @@ const dbConnect = async () => {
       }
     });
     // get all users
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await users.find().toArray();
       res.send(result);
     });
