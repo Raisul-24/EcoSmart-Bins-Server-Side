@@ -326,10 +326,10 @@ const dbConnect = async () => {
     });
     //get data base to status
     app.get("/pickupReq/:email", async (req, res) => {
-      const workerEmail = req.params.email
-      const status = req.query.status
+      const workerEmail = req.params.email;
+      const status = req.query.status;
       const result = await pickupReq
-        .find({ workerEmail,status  })
+        .find({ workerEmail, status })
         .sort({ date: -1 })
         .toArray();
       res.send(result);
