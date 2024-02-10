@@ -14,13 +14,15 @@
    ```
    yarn
    ```
-3. **Create .env file:**After creating .env file and paste these code and save it.
+3. **Create .env file:** After creating .env file and paste these code and save it.
    ```
    DB_USER=EcoSmartBins
    DB_PASS=sb2XodBRu2p5Qjxi
    ACCESS_TOKEN_SECRET=11c6909de0cff9641191eda417156a3299553265cc349c3063654241ae26ff6c
+   MICROSOFT_APP_ID=5d8e7dc6-cb2e-49d0-a0d1-be0cd946ebfc
+   MICROSOFT_APP_PASSWORD=YfJ8Q~9qlvcPj-zxlvgSrs.jMpgU1oOu~E4viaCe
    ```
-4. **Run this file:**
+4. **Run the project:** For run this project need to run this command
    ```
    nodemon index.js
    ```
