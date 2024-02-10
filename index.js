@@ -8,15 +8,15 @@ const port = process.env.PORT || 8085;
 const http = require("http");
 const socketIO = require("socket.io");
 
-const server = http.createServer(app);
-const io = socketIO(server);
+// const server = http.createServer(app);
+// const io = socketIO(server);
 
 // middleware
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "http://localhost:5173",
+      "http://localhost:5174",
       "https://eco-smart-bins.netlify.app",
     ],
 
@@ -76,6 +76,8 @@ const dbConnect = async () => {
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
+    const teams = ecoSmartBins.collection("teams");
+    const pickupReq = ecoSmartBins.collection("pickupReq");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -149,7 +151,7 @@ const dbConnect = async () => {
     });
 
     // get all teams
-    app.get("/teams", async (req, res) => {
+    app.get("/team", async (req, res) => {
       const result = await teams.find().toArray();
       res.send(result);
     });
@@ -438,6 +440,6 @@ app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
 });
 
-server.listen(port, () => {
+app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
