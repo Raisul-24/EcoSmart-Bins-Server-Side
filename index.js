@@ -5,19 +5,53 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 8085;
-const port2 = process.env.PORT || 3000;
+const http = require("http");
+const socketIO = require("socket.io");
 
-//const { Server } = require("socket.io");
-//const { createServer } = require("http");
-//
-//const server = createServer(app);
-//const io = new Server(server);
+// const server = http.createServer(app);
+// const io = socketIO(server);
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://eco-smart-bins.netlify.app",
+    ],
+
+    credentials: true,
+  })
+);
 app.use(express.json());
 
+// // middleware for jwt token
+// const verifyToken = (req, res, next) => {
+//   //  console.log("inside verify token", req.headers);
+//   if (!req.headers.authorization) {
+//     return res.status(401).send({ message: "forbidden access1" });
+//   }
+//   const token = req.headers.authorization.split(" ")[1];
+//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+//     if (err) {
+//       return res.status(401).send({ message: "forbidden access" });
+//     }
+//     req.decoded = decoded;
+//     next();
+//   });
+// };
 
+// use verify admin after verifyToken
+// const verifyAdmin = async (req, res, next) => {
+//   const email = req.decoded.email;
+//   const query = { email: email };
+//   const user = await userCollection.findOne(query);
+//   const isAdmin = user?.role === "admin";
+//   if (!isAdmin) {
+//     return res.status(403).send({ message: "forbidden access" });
+//   }
+//   next();
+// };
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -42,44 +76,46 @@ const dbConnect = async () => {
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
+    const teams = ecoSmartBins.collection("teams");
+    const pickupReq = ecoSmartBins.collection("pickupReq");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
-      console.log(user)
+      console.log(user);
       const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "1y",
       });
       res.send({ token });
     });
+
     // middleware for verifying jwt
     const verifyToken = (req, res, next) => {
-      console.log('inside verify token', req.headers.authorization);
+      // console.log("inside verify token", req.headers.authorization);
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: 'unauthorized access' });
+        return res.status(401).send({ message: "unauthorized access" });
       }
-      const token = req.headers.authorization.split(' ')[1];
+      const token = req.headers.authorization.split(" ")[1];
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          return res.status(401).send({ message: 'unauthorized access' })
+          return res.status(401).send({ message: "unauthorized access" });
         }
         req.decoded = decoded;
         next();
-      })
-    }
+      });
+    };
 
     // use verify admin after verifyToken
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
       const user = await users.findOne(query);
-      const isAdmin = user?.role === 'admin';
+      const isAdmin = user?.role === "admin";
       if (!isAdmin) {
-        return res.status(403).send({ message: 'forbidden access' });
+        return res.status(403).send({ message: "forbidden access" });
       }
       next();
-    }
-
+    };
 
     //change status value
     app.patch("/my-cart/:id", async (req, res) => {
@@ -98,7 +134,7 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    app.get("/my-cart", verifyToken, async (req, res) => {
+    app.get("/my-cart", async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
@@ -113,17 +149,22 @@ const dbConnect = async () => {
         res.status(500).send("Internal Server Error");
       }
     });
+
+    // get all teams
+    app.get("/team", async (req, res) => {
+      const result = await teams.find().toArray();
+      res.send(result);
+    });
+
     // get all users
-    app.get('/users', verifyToken, async (req, res) => {
-      console.log(req.headers)
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await users.find().toArray();
-      res.send(result)
-    })
+      res.send(result);
+    });
     // post user data for registration
     app.post("/users", async (req, res) => {
       const user = req.body;
       // insert email if user doesn't exists.
-      console.log(user);
       const query = { email: user.email };
       const existingUser = await users.findOne(query);
       if (existingUser) {
@@ -131,6 +172,27 @@ const dbConnect = async () => {
       }
 
       const result = await users.insertOne(user);
+      res.send(result);
+    });
+    //change user role
+    app.patch("/user/:id", async (req, res) => {
+      const query = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          role: query?.role,
+        },
+      };
+      const result = await users.updateOne(filter, update);
+      res.send(result);
+    });
+
+    //delete user
+    app.delete("/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await users.deleteOne(query);
       res.send(result);
     });
 
@@ -265,10 +327,67 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    //
+    //pickUp get data
+    app.get("/pickupReq", async (req, res) => {
+      const result = await pickupReq.find().sort({ date: -1 }).toArray();
+      res.send(result);
+    });
+    //get all pickup data
+    app.get("/pickupReqAll", async (req, res) => {
+      const result = await pickupReq
+        .find({ workerEmail: null })
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
+    //update worker
+    app.patch("/pickupReq/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = req.body;
+      const updateDoc = {
+        $set: {
+          workerEmail: data?.email,
+        },
+      };
+      const updateData = await pickupReq.updateOne(query, updateDoc);
+      res.send(updateData);
+    });
+    //get data base to status
+    app.get("/pickupReq/:email", async (req, res) => {
+      const workerEmail = req.params.email;
+      const status = req.query.status;
+      const result = await pickupReq
+        .find({ workerEmail, status })
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
+    //status update
+    app.patch("/statusUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = req.body;
+      const updateDoc = {
+        $set: {
+          status: data?.status,
+        },
+      };
+      const updateData = await pickupReq.updateOne(query, updateDoc);
+      res.send(updateData);
+    });
+    // pickUp Req post
     app.post("/pickupReq", async (req, res) => {
       const data = req.body;
-      console.log(data);
+      // console.log(data);
+      const query = { email: data?.email };
+      const isExist = await pickupReq.findOne(query);
+      if (isExist) {
+        return res.send({
+          message: "request already exists",
+          insertedId: null,
+        });
+      }
       const addData = await pickupReq.insertOne(data);
       res.send(addData);
     });
@@ -296,7 +415,7 @@ const dbConnect = async () => {
     app.post("/artworks", async (req, res) => {
       const data = req.body;
       console.log(data);
-      const result = await artCollection.insertOne(data);
+      const result = await team.insertOne(data);
       if (result) {
         const id = data.oldId;
         const query = { _id: new ObjectId(id) };
@@ -316,23 +435,6 @@ const dbConnect = async () => {
   }
 };
 
-//socket.io connection conformation
-//io.on("connection", (socket) => {
-//  console.log("User Connected", socket.id);
-//
-//  socket.on("message", ({ room, message }) => {
-//    console.log({ room, message });
-//    socket.to(room).emit("receive-message", message);
-//  });
-//  socket.on("join-room", (room) => {
-//    socket.join(room);
-//    console.log(`User joined room ${room}`);
-//  });
-//  socket.on("disconnect", () => {
-//    console.log("User Disconnected", socket.id);
-//  });
-//});
-
 dbConnect();
 app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
@@ -341,7 +443,3 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-//server.listen(port2, () => {
-//  console.log(`Server is running on port ${port2}`);
-//});
