@@ -4,12 +4,12 @@ const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-const port = process.env.PORT || 8085;
+//const port = process.env.PORT || 8085;
 const http = require("http");
 const socketIO = require("socket.io");
 
-// const server = http.createServer(app);
-// const io = socketIO(server);
+const server = http.createServer(app);
+const io = socketIO(server);
 
 // middleware
 app.use(
@@ -24,34 +24,6 @@ app.use(
   })
 );
 app.use(express.json());
-
-// // middleware for jwt token
-// const verifyToken = (req, res, next) => {
-//   //  console.log("inside verify token", req.headers);
-//   if (!req.headers.authorization) {
-//     return res.status(401).send({ message: "forbidden access1" });
-//   }
-//   const token = req.headers.authorization.split(" ")[1];
-//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-//     if (err) {
-//       return res.status(401).send({ message: "forbidden access" });
-//     }
-//     req.decoded = decoded;
-//     next();
-//   });
-// };
-
-// use verify admin after verifyToken
-// const verifyAdmin = async (req, res, next) => {
-//   const email = req.decoded.email;
-//   const query = { email: email };
-//   const user = await userCollection.findOne(query);
-//   const isAdmin = user?.role === "admin";
-//   if (!isAdmin) {
-//     return res.status(403).send({ message: "forbidden access" });
-//   }
-//   next();
-// };
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -76,15 +48,53 @@ const dbConnect = async () => {
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
-    const teams = ecoSmartBins.collection("teams");
     const pickupReq = ecoSmartBins.collection("pickupReq");
+    const team = ecoSmartBins.collection("teams");
+
+    //this code for socketIo
+
+    app.get("/", (req, res) => {
+      res.send("Socket.IO Server is running!");
+    });
+
+    let ioUsers = [];
+
+    const addUser = (userId, socketId) => {
+      !ioUsers.some((user) => user.userId === userId) &&
+        ioUsers.push({ userId, socketId });
+    };
+
+    const removeUser = (socketId) => {
+      ioUsers = ioUsers.filter((user) => user.socketId !== socketId);
+    };
+
+    const getUser = (receiverId) => {
+      return ioUsers.find((user) => user.userId === receiverId);
+    };
+
+    io.on("connection", (socket) => {
+      console.log("A user is connected");
+
+      socket.on("addUser", (userId) => {
+        addUser(userId, socket.id);
+        io.emit("getUsers", ioUsers);
+      });
+
+      // Handle other socket events...
+
+      socket.on("disconnect", () => {
+        console.log("A user disconnected!");
+        removeUser(socket.id);
+        io.emit("getUsers", ioUsers);
+      });
+    });
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       console.log(user);
       const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1y",
+        expiresIn: "1h",
       });
       res.send({ token });
     });
@@ -152,7 +162,7 @@ const dbConnect = async () => {
 
     // get all teams
     app.get("/team", async (req, res) => {
-      const result = await teams.find().toArray();
+      const result = await team.find().toArray();
       res.send(result);
     });
 
@@ -440,6 +450,12 @@ app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+//app.listen(port, () => {
+//  console.log(`Server is running on port ${port}`);
+//});
+
+server.listen(process.env.SOCKET_PORT || 8085, () => {
+  console.log(
+    `Socket server is running on port ${process.env.SOCKET_PORT || 8085}`
+  );
 });
