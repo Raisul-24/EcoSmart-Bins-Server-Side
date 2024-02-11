@@ -25,34 +25,6 @@ app.use(
 );
 app.use(express.json());
 
-// // middleware for jwt token
-// const verifyToken = (req, res, next) => {
-//   //  console.log("inside verify token", req.headers);
-//   if (!req.headers.authorization) {
-//     return res.status(401).send({ message: "forbidden access1" });
-//   }
-//   const token = req.headers.authorization.split(" ")[1];
-//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-//     if (err) {
-//       return res.status(401).send({ message: "forbidden access" });
-//     }
-//     req.decoded = decoded;
-//     next();
-//   });
-// };
-
-// use verify admin after verifyToken
-// const verifyAdmin = async (req, res, next) => {
-//   const email = req.decoded.email;
-//   const query = { email: email };
-//   const user = await userCollection.findOne(query);
-//   const isAdmin = user?.role === "admin";
-//   if (!isAdmin) {
-//     return res.status(403).send({ message: "forbidden access" });
-//   }
-//   next();
-// };
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
