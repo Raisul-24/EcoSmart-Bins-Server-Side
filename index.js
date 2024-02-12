@@ -2,14 +2,24 @@ require("dotenv").config();
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const SSLCommerzPayment = require('sslcommerz-lts')
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-//const port = process.env.PORT || 8085;
+
+const port = process.env.PORT || 8085;
 const http = require("http");
 const socketIO = require("socket.io");
 
 const server = http.createServer(app);
 const io = socketIO(server);
+// ssl
+const store_id = process.env.STORE_ID;
+const store_passwd = process.env.STORE_PASSWORD;
+const is_live = false //true for live, false for sandbox
+
+// const store_id = 'cdjkj65ca36cc656de';
+// const store_passwd = 'cdjkj65ca36cc656de@ssl';
+// const is_live = false //true for live, false for sandbox
 
 // middleware
 app.use(
@@ -50,6 +60,8 @@ const dbConnect = async () => {
     const artCollection = ecoSmartBins.collection("artworks");
     const pickupReq = ecoSmartBins.collection("pickupReq");
     const team = ecoSmartBins.collection("teams");
+    const orderCollection = ecoSmartBins.collection("orders");
+
 
     //this code for socketIo
 
@@ -438,6 +450,51 @@ const dbConnect = async () => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
+    // add orders
+    // app.post("/orders", async (req, res) => {
+    //   const order = req.body;
+    //   const result = await orderCollection.insertOne(order);
+    //   res.send(result);
+    // });
+    // payment
+    app.post('/order', async (req, res) =>{
+      
+      const transaction_id = new ObjectId().toString();
+      const order = req.body;
+      // console.log("order",order);
+      const data = {
+        total_amount: order?.totalPrice,
+        currency: 'BDT',
+        tran_id: transaction_id, // use unique tran_id for each api call
+        success_url: 'http://localhost:3030/success',
+        fail_url: 'http://localhost:3030/fail',
+        cancel_url: 'http://localhost:3030/cancel',
+        ipn_url: 'http://localhost:3030/ipn',
+        shipping_method: 'Courier',
+        cus_name: order?.CustomerName,
+        cus_email: order?.CustomerEmail,
+        cus_add1: order?.CustomerCity,
+        cus_add2: order?.CustomerAddress,
+        cus_postcode: '1000',
+        cus_country: 'Bangladesh',
+        cus_phone: order?.CustomerMobile,
+        ship_name: order?.CustomerName,
+        ship_add1: order?.CustomerCity,
+        ship_add2: order?.CustomerAddress,
+        payment_method: order?.paymentData,
+        ship_postcode: 1000,
+        ship_country: 'Bangladesh',
+    };
+    console.log(data)
+    const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+    sslcz.init(data).then(apiResponse => {
+        // Redirect the user to payment gateway
+        let GatewayPageURL = apiResponse.GatewayPageURL
+        res.send({ url: GatewayPageURL })
+        
+        console.log('Redirecting to: ', GatewayPageURL)
+    });
+    })
 
     console.log("DB Connected Successfully✅");
   } catch (error) {
@@ -450,12 +507,12 @@ app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
 });
 
-//app.listen(port, () => {
-//  console.log(`Server is running on port ${port}`);
-//});
-
-server.listen(process.env.SOCKET_PORT || 8085, () => {
-  console.log(
-    `Socket server is running on port ${process.env.SOCKET_PORT || 8085}`
-  );
+app.listen(port, () => {
+ console.log(`Server is running on port ${port}`);
 });
+
+// server.listen(process.env.SOCKET_PORT || 8085, () => {
+//   console.log(
+//     `Socket server is running on port ${process.env.SOCKET_PORT || 8085}`
+//   );
+// });
