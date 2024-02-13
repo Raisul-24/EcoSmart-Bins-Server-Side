@@ -18,7 +18,6 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.3.0",
     "socket.io": "^4.7.4",
-    "sslcommerz-lts": "^1.1.0",
-    "sslcommerz-nodejs": "^1.0.8"
+    "sslcommerz-lts": "^1.1.0"
   }
 }

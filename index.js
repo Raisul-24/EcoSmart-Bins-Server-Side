@@ -457,43 +457,96 @@ const dbConnect = async () => {
     //   res.send(result);
     // });
     // payment
-    app.post('/order', async (req, res) =>{
-      
+    app.post('/order', async (req, res) => {
+
       const transaction_id = new ObjectId().toString();
       const order = req.body;
-      // console.log("order",order);
+      // payable data store in mngo db
+      const payableOrder = {
+        product_name: order?.title,
+        cus_name: order?.CustomerName,
+        cus_email: order?.CustomerEmail,
+        cus_phone: order?.CustomerMobile,
+        cus_add1: order?.CustomerCity,
+        cus_add2: order?.CustomerAddress,
+        total_amount: order?.totalPrice,
+      }
+      console.log("order", order);
       const data = {
         total_amount: order?.totalPrice,
         currency: 'BDT',
         tran_id: transaction_id, // use unique tran_id for each api call
-        success_url: 'http://localhost:3030/success',
-        fail_url: 'http://localhost:3030/fail',
+        success_url: `http://localhost:8085/payment/success/${transaction_id}`,
+        fail_url: `http://localhost:8085/payment/fail/${transaction_id}`,
         cancel_url: 'http://localhost:3030/cancel',
         ipn_url: 'http://localhost:3030/ipn',
         shipping_method: 'Courier',
+        product_name: order?.title,
+        product_category: 'Electronic',
+        product_profile: 'general',
         cus_name: order?.CustomerName,
         cus_email: order?.CustomerEmail,
         cus_add1: order?.CustomerCity,
         cus_add2: order?.CustomerAddress,
+        cus_city: 'Dhaka',
+        cus_state: 'Dhaka',
         cus_postcode: '1000',
         cus_country: 'Bangladesh',
         cus_phone: order?.CustomerMobile,
+        // cus_fax: '01711111111',
         ship_name: order?.CustomerName,
         ship_add1: order?.CustomerCity,
         ship_add2: order?.CustomerAddress,
-        payment_method: order?.paymentData,
+        ship_city: 'Dhaka',
+        ship_state: 'Dhaka',
         ship_postcode: 1000,
         ship_country: 'Bangladesh',
-    };
-    console.log(data)
-    const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
-    sslcz.init(data).then(apiResponse => {
+
+      };
+      console.log(data)
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+      sslcz.init(data).then(apiResponse => {
         // Redirect the user to payment gateway
         let GatewayPageURL = apiResponse.GatewayPageURL
-        res.send({ url: GatewayPageURL })
-        
+        res.send({ url: GatewayPageURL });
+
+
+        const finalOrder = {
+          payableOrder,
+          paidStatus: false,
+          transaction_ID: transaction_id,
+        }
+        const result = orderCollection.insertOne(finalOrder);
+
+
         console.log('Redirecting to: ', GatewayPageURL)
-    });
+      });
+
+
+
+      app.post('/payment/success/:transaction_id', async (req, res) => {
+        console.log(req.params.transaction_id);
+        const result = await orderCollection.updateOne({ transaction_ID: req.params.transaction_id },
+          {
+            $set: {
+              paidStatus: true,
+            },
+          }
+        );
+        if (result.modifiedCount > 0) {
+          res.redirect(`http://localhost:5173/payment/success/${req.params.transaction_id}`)
+        }
+      });
+
+      app.post('/payment/fail/:transaction_id', async (req, res) => {
+        const result = await orderCollection.deleteOne({transaction_ID :req.params.transaction_id});
+        if(result.deletedCount){
+          res.redirect(``);
+        }
+      });
+
+
+
     })
 
     console.log("DB Connected Successfully✅");
@@ -508,7 +561,7 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
- console.log(`Server is running on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
 
 // server.listen(process.env.SOCKET_PORT || 8085, () => {
