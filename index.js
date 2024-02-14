@@ -450,7 +450,6 @@ const dbConnect = async () => {
 
     // payment
     app.post('/order', async (req, res) => {
-
       const transaction_id = new ObjectId().toString();
       const order = req.body;
       // payable data store in mngo db
@@ -502,18 +501,14 @@ const dbConnect = async () => {
         let GatewayPageURL = apiResponse.GatewayPageURL
         res.send({ url: GatewayPageURL });
 
-
         const finalOrder = {
           payableOrder,
           paidStatus: false,
           transaction_ID: transaction_id,
         }
         const result = orderCollection.insertOne(finalOrder);
-
-
         console.log('Redirecting to: ', GatewayPageURL)
       });
-
 
 
       app.post('/payment/success/:transaction_id', async (req, res) => {
@@ -529,15 +524,12 @@ const dbConnect = async () => {
           res.redirect(`http://localhost:5173/payment/success/${req.params.transaction_id}`)
         }
       });
-
       app.post('/payment/fail/:transaction_id', async (req, res) => {
-        const result = await orderCollection.deleteOne({transaction_ID :req.params.transaction_id});
-        if(result.deletedCount){
+        const result = await orderCollection.deleteOne({ transaction_ID: req.params.transaction_id });
+        if (result.deletedCount) {
           res.redirect(``);
         }
       });
-
-
 
     })
 
