@@ -50,6 +50,7 @@ const dbConnect = async () => {
     const artCollection = ecoSmartBins.collection("artworks");
     const pickupReq = ecoSmartBins.collection("pickupReq");
     const team = ecoSmartBins.collection("teams");
+    const blogCategories = ecoSmartBins.collection("blogCategories");
 
     //this code for socketIo
 
@@ -92,7 +93,7 @@ const dbConnect = async () => {
     // jwt related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
-      console.log(user);
+      //  console.log(user);
       const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "1h",
       });
@@ -132,16 +133,29 @@ const dbConnect = async () => {
       const query = req.body;
       //console.log("query", query);
       const id = req.params.id;
-      console.log(id);
+      //  console.log(id);
       const filter = { _id: id };
       const update = {
         $set: {
           status: query?.status,
         },
       };
-      console.log(update);
+      //  console.log(update);
       const result = await myCart.updateOne(filter, update);
       res.send(result);
+    });
+
+    // get all categories of blog
+    app.get("/categories", async (req, res) => {
+      try {
+        const categories = await blogCategories.find().toArray();
+        res.send(categories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        res
+          .status(500)
+          .send({ status: false, message: "Internal server error" });
+      }
     });
 
     app.get("/my-cart", async (req, res) => {
@@ -313,8 +327,9 @@ const dbConnect = async () => {
 
     //blogs all data
     app.get("/blogs", async (req, res) => {
-      const data = await blogs.find().toArray();
-      res.send(data);
+      const data = blogs.find();
+      const result = await data.toArray();
+      res.send(result);
     });
 
     //blog a data by id
@@ -424,7 +439,7 @@ const dbConnect = async () => {
     // art work
     app.post("/artworks", async (req, res) => {
       const data = req.body;
-      console.log(data);
+      //  console.log(data);
       const result = await team.insertOne(data);
       if (result) {
         const id = data.oldId;
