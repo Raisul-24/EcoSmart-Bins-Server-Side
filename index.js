@@ -473,7 +473,6 @@ const dbConnect = async () => {
 
     // payment
     app.post('/order', async (req, res) => {
-
       const transaction_id = new ObjectId().toString();
       const order = req.body;
       // payable data store in mngo db
@@ -517,10 +516,40 @@ const dbConnect = async () => {
     sslcz.init(data).then(apiResponse => {
         // Redirect the user to payment gateway
         let GatewayPageURL = apiResponse.GatewayPageURL
-        res.send({ url: GatewayPageURL })
-        
+        res.send({ url: GatewayPageURL });
+
+        const finalOrder = {
+          payableOrder,
+          paidStatus: false,
+          transaction_ID: transaction_id,
+        }
+        const result = orderCollection.insertOne(finalOrder);
+        console.log('Redirecting to: ', GatewayPageURL)
+      });
+
+      app.post('/payment/success/:transaction_id', async (req, res) => {
+        console.log(req.params.transaction_id);
+        const result = await orderCollection.updateOne({ transaction_ID: req.params.transaction_id },
+          {
+            $set: {
+              paidStatus: true,
+            },
+          }
+        );
+        if (result.modifiedCount > 0) {
+          res.redirect(`http://localhost:5173/payment/success/${req.params.transaction_id}`)
+        }
+      });
+      app.post('/payment/fail/:transaction_id', async (req, res) => {
+        const result = await orderCollection.deleteOne({ transaction_ID: req.params.transaction_id });
+        if (result.deletedCount) {
+          res.redirect(``);
+        }
+      });
+        res.send({ url: GatewayPageURL })      
         console.log('Redirecting to: ', GatewayPageURL)
     });
+
     })
 
     console.log("DB Connected Successfully✅");
