@@ -17,9 +17,6 @@ const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
 
-// const store_id = 'cdjkj65ca36cc656de';
-// const store_passwd = 'cdjkj65ca36cc656de@ssl';
-// const is_live = false //true for live, false for sandbox
 
 // middleware
 app.use(
@@ -473,12 +470,7 @@ const dbConnect = async () => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
-    // add orders
-    // app.post("/orders", async (req, res) => {
-    //   const order = req.body;
-    //   const result = await orderCollection.insertOne(order);
-    //   res.send(result);
-    // });
+
     // payment
     app.post('/order', async (req, res) => {
 
