@@ -18,7 +18,6 @@ const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
 
-
 // client side server url
 const clientSideUrl = "https://eco-smart-bins.netlify.app";
 
@@ -57,6 +56,7 @@ const dbConnect = async () => {
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
     const blogs = ecoSmartBins.collection("blogs");
+    const servicesCategories = ecoSmartBins.collection("servicesCategory");
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
@@ -177,6 +177,12 @@ const dbConnect = async () => {
     // get all teams
     app.get("/team", async (req, res) => {
       const result = await team.find().toArray();
+      res.send(result);
+    });
+
+    // get all teams
+    app.get("/service-category", async (req, res) => {
+      const result = await servicesCategories.find().toArray();
       res.send(result);
     });
 
