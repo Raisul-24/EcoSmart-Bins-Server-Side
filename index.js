@@ -9,6 +9,7 @@ const app = express();
 const port = process.env.PORT || 8085;
 const http = require("http");
 const socketIO = require("socket.io");
+const { count } = require("console");
 
 const server = http.createServer(app);
 const io = socketIO(server);
@@ -16,10 +17,6 @@ const io = socketIO(server);
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
-
-// const store_id = 'cdjkj65ca36cc656de';
-// const store_passwd = 'cdjkj65ca36cc656de@ssl';
-// const is_live = false //true for live, false for sandbox
 
 // middleware
 app.use(
@@ -60,7 +57,6 @@ const dbConnect = async () => {
     const artCollection = ecoSmartBins.collection("artworks");
     const pickupReq = ecoSmartBins.collection("pickupReq");
     const team = ecoSmartBins.collection("teams");
-    const blogCategories = ecoSmartBins.collection("blogCategories");
     const orderCollection = ecoSmartBins.collection("orders");
 
     //this code for socketIo
@@ -104,7 +100,7 @@ const dbConnect = async () => {
     // jwt related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
-      //  console.log(user);
+      console.log(user);
       const token = await jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "1h",
       });
@@ -144,29 +140,16 @@ const dbConnect = async () => {
       const query = req.body;
       //console.log("query", query);
       const id = req.params.id;
-      //  console.log(id);
+      console.log(id);
       const filter = { _id: id };
       const update = {
         $set: {
           status: query?.status,
         },
       };
-      //  console.log(update);
+      console.log(update);
       const result = await myCart.updateOne(filter, update);
       res.send(result);
-    });
-
-    // get all categories of blog
-    app.get("/categories", async (req, res) => {
-      try {
-        const categories = await blogCategories.find().toArray();
-        res.send(categories);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        res
-          .status(500)
-          .send({ status: false, message: "Internal server error" });
-      }
     });
 
     app.get("/my-cart", async (req, res) => {
@@ -246,10 +229,11 @@ const dbConnect = async () => {
     });
     // get products data for shop page
     app.get("/products", async (req, res) => {
+      const page = parseInt(req?.query?.Page);
+      const size = parseInt(req.query.size);
       let qurey = {};
       if (req.query.category?.length > 0) {
         qurey = { category: req.query.category };
-        console.log(qurey);
       }
       if (req.query.search?.length > 0) {
         qurey = {
@@ -262,7 +246,11 @@ const dbConnect = async () => {
           category: req.query.category,
         };
       }
-      const data = await products.find(qurey).toArray();
+      const data = await products
+        .find(qurey)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(data);
     });
     app.get("/productsCategory", async (req, res) => {
@@ -273,6 +261,11 @@ const dbConnect = async () => {
           shopCategory.push(item?.category);
       });
       res.send(shopCategory);
+    });
+    //total product count
+    app.get("/totalproducts", async (req, res) => {
+      const data = await products.estimatedDocumentCount();
+      res.send({ count: data });
     });
 
     // single product data for shop page
@@ -362,9 +355,8 @@ const dbConnect = async () => {
 
     //blogs all data
     app.get("/blogs", async (req, res) => {
-      const data = blogs.find();
-      const result = await data.toArray();
-      res.send(result);
+      const data = await blogs.find().toArray();
+      res.send(data);
     });
 
     //blog a data by id
@@ -474,7 +466,7 @@ const dbConnect = async () => {
     // art work
     app.post("/artworks", async (req, res) => {
       const data = req.body;
-      //  console.log(data);
+      console.log(data);
       const result = await team.insertOne(data);
       if (result) {
         const id = data.oldId;
@@ -488,12 +480,6 @@ const dbConnect = async () => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
-    // add orders
-    // app.post("/orders", async (req, res) => {
-    //   const order = req.body;
-    //   const result = await orderCollection.insertOne(order);
-    //   res.send(result);
-    // });
     // payment
     app.post("/order", async (req, res) => {
       const transaction_id = new ObjectId().toString();
@@ -513,15 +499,20 @@ const dbConnect = async () => {
         total_amount: order?.totalPrice,
         currency: "BDT",
         tran_id: transaction_id, // use unique tran_id for each api call
-        success_url: "http://localhost:3030/success",
-        fail_url: "http://localhost:3030/fail",
+        success_url: `http://localhost:8085/payment/success/${transaction_id}`,
+        fail_url: `http://localhost:8085/payment/fail/${transaction_id}`,
         cancel_url: "http://localhost:3030/cancel",
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
+        product_name: order?.title,
+        product_category: "Electronic",
+        product_profile: "general",
         cus_name: order?.CustomerName,
         cus_email: order?.CustomerEmail,
         cus_add1: order?.CustomerCity,
         cus_add2: order?.CustomerAddress,
+        cus_city: "Dhaka",
+        cus_state: "Dhaka",
         cus_postcode: "1000",
         cus_country: "Bangladesh",
         cus_phone: order?.CustomerMobile,
@@ -540,8 +531,40 @@ const dbConnect = async () => {
         // Redirect the user to payment gateway
         let GatewayPageURL = apiResponse.GatewayPageURL;
         res.send({ url: GatewayPageURL });
+        const finalOrder = {
+          payableOrder,
+          paidStatus: false,
+          transaction_ID: transaction_id,
+        };
+        const result = orderCollection.insertOne(finalOrder);
 
         console.log("Redirecting to: ", GatewayPageURL);
+      });
+
+      app.post("/payment/success/:transaction_id", async (req, res) => {
+        console.log(req.params.transaction_id);
+        const result = await orderCollection.updateOne(
+          { transaction_ID: req.params.transaction_id },
+          {
+            $set: {
+              paidStatus: true,
+            },
+          }
+        );
+        if (result.modifiedCount > 0) {
+          res.redirect(
+            `http://localhost:5173/payment/success/${req.params.transaction_id}`
+          );
+        }
+      });
+
+      app.post("/payment/fail/:transaction_id", async (req, res) => {
+        const result = await orderCollection.deleteOne({
+          transaction_ID: req.params.transaction_id,
+        });
+        if (result.deletedCount) {
+          res.redirect(``);
+        }
       });
     });
 
