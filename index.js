@@ -17,7 +17,13 @@ const io = socketIO(server);
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
-const serverUrl = "http://localhost:8085";
+
+
+// client side server url
+const clientSideUrl = "https://eco-smart-bins.netlify.app";
+
+// server side server url
+const serverSideUrl = "https://eco-smart-bin.vercel.app";
 // middleware
 app.use(
   cors({
@@ -535,8 +541,8 @@ const dbConnect = async () => {
         total_amount: order?.totalPrice,
         currency: "BDT",
         tran_id: transaction_id, // use unique tran_id for each api call
-        success_url: `${serverUrl}/payment/success/${transaction_id}`,
-        fail_url: `${serverUrl}/payment/fail/${transaction_id}`,
+        success_url: `${serverSideUrl}/payment/success/${transaction_id}`,
+        fail_url: `${serverSideUrl}/payment/fail/${transaction_id}`,
         cancel_url: "http://localhost:3030/cancel",
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
@@ -589,7 +595,7 @@ const dbConnect = async () => {
         );
         if (result.modifiedCount > 0) {
           res.redirect(
-            `http://localhost:5173/payment/success/${req.params.transaction_id}`
+            `${clientSideUrl}/payment/success/${req.params.transaction_id}`
           );
         }
       });
