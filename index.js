@@ -18,6 +18,12 @@ const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
 
+
+// client side server url
+const clientSideUrl = "https://eco-smart-bins.netlify.app";
+
+// server side server url
+const serverSideUrl = "https://eco-smart-bin.vercel.app";
 // middleware
 app.use(
   cors({
@@ -268,6 +274,18 @@ const dbConnect = async () => {
       res.send({ count: data });
     });
 
+    app.get("/DashboardOverview", async (req, res) => {
+      const service = await services.estimatedDocumentCount();
+      const user = await users.estimatedDocumentCount();
+      const product = await products.estimatedDocumentCount();
+      const data = [
+        { name: "services", total: service },
+        { name: "users", total: user },
+        { name: "products", total: product },
+      ];
+      res.send(data);
+    });
+
     // single product data for shop page
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -355,8 +373,32 @@ const dbConnect = async () => {
 
     //blogs all data
     app.get("/blogs", async (req, res) => {
-      const data = await blogs.find().toArray();
+      let qurey = {};
+      if (req.query.category?.length > 0) {
+        qurey = { category: req.query.category };
+      }
+      if (req.query.search?.length > 0) {
+        qurey = {
+          name: { $regex: req.query.search, $options: "i" },
+        };
+      }
+      if (req.query.search?.length > 0 && req.query.category?.length > 0) {
+        qurey = {
+          name: { $regex: req.query.search, $options: "i" },
+          category: req.query.category,
+        };
+      }
+      const data = await blogs.find(qurey).toArray();
       res.send(data);
+    });
+    app.get("/blogsCategory", async (req, res) => {
+      const data = await blogs.find().toArray();
+      const shopCategory = [];
+      data?.forEach((item) => {
+        if (!shopCategory.includes(item?.category))
+          shopCategory.push(item?.category);
+      });
+      res.send(shopCategory);
     });
 
     //blog a data by id
@@ -499,8 +541,8 @@ const dbConnect = async () => {
         total_amount: order?.totalPrice,
         currency: "BDT",
         tran_id: transaction_id, // use unique tran_id for each api call
-        success_url: `http://localhost:8085/payment/success/${transaction_id}`,
-        fail_url: `http://localhost:8085/payment/fail/${transaction_id}`,
+        success_url: `${serverSideUrl}/payment/success/${transaction_id}`,
+        fail_url: `${serverSideUrl}/payment/fail/${transaction_id}`,
         cancel_url: "http://localhost:3030/cancel",
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
@@ -553,7 +595,7 @@ const dbConnect = async () => {
         );
         if (result.modifiedCount > 0) {
           res.redirect(
-            `http://localhost:5173/payment/success/${req.params.transaction_id}`
+            `${clientSideUrl}/payment/success/${req.params.transaction_id}`
           );
         }
       });
