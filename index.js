@@ -528,7 +528,15 @@ const dbConnect = async () => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
+
+
     // payment
+
+    app.get("/order", async(req, res) => {
+      const result = await orderCollection.find().toArray()
+      res.send(result)
+    })
+
     app.post("/order", async (req, res) => {
       const transaction_id = new ObjectId().toString();
       const order = req.body;
