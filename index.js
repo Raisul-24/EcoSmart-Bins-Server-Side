@@ -176,7 +176,12 @@ const dbConnect = async () => {
       }
     });
 
-    // get all teams
+    // get all industries
+    app.get("/industries", async (req, res) => {
+      const result = await industries.find().toArray();
+      res.send(result);
+    });
+
     app.get("/team", async (req, res) => {
       const result = await team.find().toArray();
       res.send(result);
@@ -537,13 +542,12 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-
     // payment
 
-    app.get("/order", async(req, res) => {
-      const result = await orderCollection.find().toArray()
-      res.send(result)
-    })
+    app.get("/order", async (req, res) => {
+      const result = await orderCollection.find().toArray();
+      res.send(result);
+    });
 
     app.post("/order", async (req, res) => {
       const transaction_id = new ObjectId().toString();
