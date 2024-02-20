@@ -63,6 +63,8 @@ const dbConnect = async () => {
     const artCollection = ecoSmartBins.collection("artworks");
     const pickupReq = ecoSmartBins.collection("pickupReq");
     const team = ecoSmartBins.collection("teams");
+    const industries = ecoSmartBins.collection("industries");
+    const serviceDetailsChart = ecoSmartBins.collection("serviceDetailsChart");
     const orderCollection = ecoSmartBins.collection("orders");
 
     //this code for socketIo
@@ -177,6 +179,12 @@ const dbConnect = async () => {
     // get all teams
     app.get("/team", async (req, res) => {
       const result = await team.find().toArray();
+      res.send(result);
+    });
+
+    // get chart for serviceDetails
+    app.get("/serviceDetails-chart", async (req, res) => {
+      const result = await serviceDetailsChart.find().toArray();
       res.send(result);
     });
 
