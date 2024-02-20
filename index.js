@@ -232,6 +232,12 @@ const dbConnect = async () => {
       const result = await myCart.insertOne(item);
       res.send(result);
     });
+    app.delete("/my-cart/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await myCart.deleteOne(query);
+      res.send(result);
+    });
 
     // post products
     app.post("/products", async (req, res) => {
