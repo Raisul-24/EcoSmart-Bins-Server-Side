@@ -182,6 +182,14 @@ const dbConnect = async () => {
       res.send(result);
     });
 
+    //service a data by id
+    app.get("/industries/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = await services.findOne(query);
+      res.send(data);
+    });
+
     app.get("/team", async (req, res) => {
       const result = await team.find().toArray();
       res.send(result);
@@ -364,6 +372,7 @@ const dbConnect = async () => {
       const data = await services.findOne(query);
       res.send(data);
     });
+
     //service add new data
     app.post("/services", async (req, res) => {
       const data = req.body;
