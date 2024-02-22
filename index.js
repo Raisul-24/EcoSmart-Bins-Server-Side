@@ -18,9 +18,8 @@ const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
 
-
-// // client side server url
-// const clientSideUrl = "https://eco-smart-bins.netlify.app";
+// client side server url
+const clientSideUrl = "https://eco-smart-bins.netlify.app";
 
 // // server side server url
 // const serverSideUrl = "https://eco-smart-bin.vercel.app";
@@ -57,12 +56,15 @@ const dbConnect = async () => {
     const services = ecoSmartBins.collection("services");
     const reviewCollection = ecoSmartBins.collection("reviews");
     const blogs = ecoSmartBins.collection("blogs");
+    const servicesCategories = ecoSmartBins.collection("servicesCategory");
     const products = ecoSmartBins.collection("products");
     const myCart = ecoSmartBins.collection("myCart");
     const showcaseCollection = ecoSmartBins.collection("showcase");
     const artCollection = ecoSmartBins.collection("artworks");
     const pickupReq = ecoSmartBins.collection("pickupReq");
     const team = ecoSmartBins.collection("teams");
+    const industries = ecoSmartBins.collection("industries");
+    const serviceDetailsChart = ecoSmartBins.collection("serviceDetailsChart");
     const orderCollection = ecoSmartBins.collection("orders");
 
     //this code for socketIo
@@ -174,9 +176,26 @@ const dbConnect = async () => {
       }
     });
 
-    // get all teams
+    // get all industries
+    app.get("/industries", async (req, res) => {
+      const result = await industries.find().toArray();
+      res.send(result);
+    });
+
     app.get("/team", async (req, res) => {
       const result = await team.find().toArray();
+      res.send(result);
+    });
+
+    // get chart for serviceDetails
+    app.get("/serviceDetails-chart", async (req, res) => {
+      const result = await serviceDetailsChart.find().toArray();
+      res.send(result);
+    });
+
+    // get all teams
+    app.get("/service-category", async (req, res) => {
+      const result = await servicesCategories.find().toArray();
       res.send(result);
     });
 
@@ -226,6 +245,13 @@ const dbConnect = async () => {
       const result = await myCart.insertOne(item);
       res.send(result);
     });
+    app.delete("/my-cart/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await myCart.deleteOne(query);
+      res.send(result);
+    });
+
 
     // post products
     app.post("/products", async (req, res) => {
@@ -522,7 +548,14 @@ const dbConnect = async () => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
+
     // payment
+
+    app.get("/order", async (req, res) => {
+      const result = await orderCollection.find().toArray();
+      res.send(result);
+    });
+
     app.post("/order", async (req, res) => {
       const transaction_id = new ObjectId().toString();
       const order = req.body;
