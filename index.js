@@ -9,10 +9,19 @@ const app = express();
 const port = process.env.PORT || 8085;
 const http = require("http");
 const socketIO = require("socket.io");
-const { count } = require("console");
+const config = {
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://eco-smart-bins.netlify.app",
+  ],
 
+  credentials: true,
+};
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIO(server, {
+  cors: config,
+});
 // ssl
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
@@ -24,17 +33,7 @@ const clientSideUrl = "https://eco-smart-bins.netlify.app";
 // server side server url
 const serverSideUrl = "https://eco-smart-bin.vercel.app";
 // middleware
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://eco-smart-bins.netlify.app",
-    ],
-
-    credentials: true,
-  })
-);
+app.use(cors(config));
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
@@ -67,6 +66,7 @@ const dbConnect = async () => {
     const industriesCategory = ecoSmartBins.collection("industriesCategory");
     const serviceDetailsChart = ecoSmartBins.collection("serviceDetailsChart");
     const orderCollection = ecoSmartBins.collection("orders");
+    const notification = ecoSmartBins.collection("notification");
 
     //this code for socketIo
 
@@ -91,10 +91,24 @@ const dbConnect = async () => {
 
     io.on("connection", (socket) => {
       console.log("A user is connected");
-
+      //add user
       socket.on("addUser", (userId) => {
         addUser(userId, socket.id);
-        io.emit("getUsers", ioUsers);
+        io.emit("getUsers", "wellcome");
+      });
+      //notification
+      socket.on("notification", async (data) => {
+        const { email, type, sentData } = data;
+        if (type === "sent") {
+          await notification.insertOne(sentData);
+        }
+        const query = { email };
+        const find = await notification
+          .find(query)
+          .sort({ date: -1 })
+          .limit(20)
+          .toArray();
+        io.emit("receive-notification", find);
       });
 
       // Handle other socket events...
@@ -102,7 +116,6 @@ const dbConnect = async () => {
       socket.on("disconnect", () => {
         console.log("A user disconnected!");
         removeUser(socket.id);
-        io.emit("getUsers", ioUsers);
       });
     });
 
@@ -161,7 +174,7 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    app.get("/my-cart", async (req, res) => {
+    app.get("/myCart", async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
@@ -514,8 +527,9 @@ const dbConnect = async () => {
     app.post("/pickupReq", async (req, res) => {
       const data = req.body;
       // console.log(data);
-      const query = { email: data?.email };
+      const query = { email: data?.email, status: "ongoing" };
       const isExist = await pickupReq.findOne(query);
+      console.log(isExist);
       if (isExist) {
         return res.send({
           message: "request already exists",
@@ -668,12 +682,6 @@ app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-// server.listen(process.env.SOCKET_PORT || 8085, () => {
-//   console.log(
-//     `Socket server is running on port ${process.env.SOCKET_PORT || 8085}`
-//   );
-// });
