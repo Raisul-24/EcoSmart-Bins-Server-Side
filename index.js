@@ -63,6 +63,7 @@ const dbConnect = async () => {
     const pickupReq = ecoSmartBins.collection("pickupReq");
     const team = ecoSmartBins.collection("teams");
     const industries = ecoSmartBins.collection("industries");
+    const industriesCategory = ecoSmartBins.collection("industriesCategory");
     const serviceDetailsChart = ecoSmartBins.collection("serviceDetailsChart");
     const orderCollection = ecoSmartBins.collection("orders");
     const notification = ecoSmartBins.collection("notification");
@@ -189,10 +190,23 @@ const dbConnect = async () => {
       }
     });
 
+    // get all category of industries
+    app.get("/industries-category", async (req, res) => {
+      const result = await industriesCategory.find().toArray();
+      res.send(result);
+    });
     // get all industries
     app.get("/industries", async (req, res) => {
       const result = await industries.find().toArray();
       res.send(result);
+    });
+
+    //service a data by id
+    app.get("/industry/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = await industries.findOne(query);
+      res.send(data);
     });
 
     app.get("/team", async (req, res) => {
@@ -377,6 +391,7 @@ const dbConnect = async () => {
       const data = await services.findOne(query);
       res.send(data);
     });
+
     //service add new data
     app.post("/services", async (req, res) => {
       const data = req.body;
