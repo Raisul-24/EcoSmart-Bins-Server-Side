@@ -181,9 +181,9 @@ const dbConnect = async () => {
         if (req.query?.email) {
           query = { email: req.query.email };
         }
-        //console.log(query);
+        // console.log(query);
         const result = await myCart.find(query).toArray();
-        //console.log(result);
+        // console.log(result);
         res.json(result);
       } catch (error) {
         console.error(error);
@@ -270,6 +270,7 @@ const dbConnect = async () => {
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
       const item = req.body;
+      console.log(item)
       const result = await myCart.insertOne(item);
       res.send(result);
     });
@@ -279,6 +280,7 @@ const dbConnect = async () => {
       const result = await myCart.deleteOne(query);
       res.send(result);
     });
+
 
     // post products
     app.post("/products", async (req, res) => {
