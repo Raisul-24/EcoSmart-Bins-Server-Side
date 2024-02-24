@@ -31,7 +31,8 @@ const is_live = false; //true for live, false for sandbox
 const clientSideUrl = "https://eco-smart-bins.netlify.app";
 
 // server side server url
-const serverSideUrl = "https://eco-smart-bin.vercel.app";
+// const serverSideUrl = "https://eco-smart-bin.vercel.app";
+const serverSideUrl = "https://ecosmart-bins-server-side.onrender.com";
 // middleware
 app.use(cors(config));
 app.use(express.json());
@@ -174,7 +175,7 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    app.get("/myCart", async (req, res) => {
+    app.get("/my-cart", async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
