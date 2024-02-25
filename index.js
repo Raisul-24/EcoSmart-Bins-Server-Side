@@ -21,6 +21,8 @@ const config = {
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: config,
+  methods: ["GET", "POST"],
+  credentials: true,
 });
 // ssl
 const store_id = process.env.STORE_ID;
