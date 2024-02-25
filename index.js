@@ -33,7 +33,8 @@ const is_live = false; //true for live, false for sandbox
 const clientSideUrl = "https://eco-smart-bins.netlify.app";
 
 // server side server url
-const serverSideUrl = "https://eco-smart-bin.vercel.app";
+// const serverSideUrl = "https://eco-smart-bin.vercel.app";
+const serverSideUrl = "https://ecosmart-bins-server-side.onrender.com";
 // middleware
 app.use(cors(config));
 app.use(express.json());
@@ -176,15 +177,15 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    app.get("/myCart", async (req, res) => {
+    app.get("/my-cart", async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
           query = { email: req.query.email };
         }
-        //console.log(query);
+        // console.log(query);
         const result = await myCart.find(query).toArray();
-        //console.log(result);
+        // console.log(result);
         res.json(result);
       } catch (error) {
         console.error(error);
@@ -271,6 +272,7 @@ const dbConnect = async () => {
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
       const item = req.body;
+      console.log(item)
       const result = await myCart.insertOne(item);
       res.send(result);
     });
@@ -280,6 +282,7 @@ const dbConnect = async () => {
       const result = await myCart.deleteOne(query);
       res.send(result);
     });
+
 
     // post products
     app.post("/products", async (req, res) => {
