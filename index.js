@@ -21,8 +21,6 @@ const config = {
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: config,
-  methods: ["GET", "POST"],
-  credentials: true,
 });
 // ssl
 const store_id = process.env.STORE_ID;
@@ -272,7 +270,7 @@ const dbConnect = async () => {
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
       const item = req.body;
-      console.log(item)
+      console.log(item);
       const result = await myCart.insertOne(item);
       res.send(result);
     });
@@ -282,7 +280,6 @@ const dbConnect = async () => {
       const result = await myCart.deleteOne(query);
       res.send(result);
     });
-
 
     // post products
     app.post("/products", async (req, res) => {
@@ -348,7 +345,9 @@ const dbConnect = async () => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await products.findOne(filter);
-      res.send(result);
+      const qurey = { _id: { $not : {$eq: new ObjectId(id)}}, category: result?.category };
+      const find = await products.find(qurey).toArray();
+      res.send({ details: result,category: find });
     });
 
     //update a product
