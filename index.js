@@ -14,6 +14,7 @@ const config = {
     "http://localhost:5173",
     "http://localhost:5174",
     "https://eco-smart-bins.netlify.app",
+    "https://ecosmart-bins.netlify.app",
   ],
 
   credentials: true,
@@ -345,9 +346,12 @@ const dbConnect = async () => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await products.findOne(filter);
-      const qurey = { _id: { $not : {$eq: new ObjectId(id)}}, category: result?.category };
+      const qurey = {
+        _id: { $not: { $eq: new ObjectId(id) } },
+        category: result?.category,
+      };
       const find = await products.find(qurey).toArray();
-      res.send({ details: result,category: find });
+      res.send({ details: result, category: find });
     });
 
     //update a product
