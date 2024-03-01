@@ -29,8 +29,7 @@ const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
 
 // client side server url
-// const clientSideUrl = "https://eco-smart-bins.netlify.app";
-const clientSideUrl = "https://ecosmart-bins.netlify.app";
+const clientSideUrl = "https://eco-smart-bins.netlify.app";
 
 // server side server url
 // const serverSideUrl = "https://eco-smart-bin.vercel.app";
