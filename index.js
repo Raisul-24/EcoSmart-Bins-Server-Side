@@ -78,6 +78,7 @@ const dbConnect = async () => {
     const orderCollection = ecoSmartBins.collection("orders");
     const notification = ecoSmartBins.collection("notification");
     const careerCollection = ecoSmartBins.collection("career");
+    const application = ecoSmartBins.collection("application");
     const subscriberCollection = ecoSmartBins.collection("subscriber");
 
     //this code for socketIo
@@ -648,6 +649,18 @@ const dbConnect = async () => {
     // career
     app.get("/career", async (req, res) => {
       const data = await careerCollection.find().toArray();
+      res.send(data);
+    });
+
+    // application
+    app.post("/application", async (req, res) => {
+      const data = req.body;
+      const applyData = await application.insertOne(data);
+      res.send(productData);
+    });
+
+    app.get("/application", async (req, res) => {
+      const data = await application.find().toArray();
       res.send(data);
     });
 
