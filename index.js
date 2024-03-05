@@ -5,6 +5,14 @@ const cors = require("cors");
 const SSLCommerzPayment = require("sslcommerz-lts");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAIL_GUN_API_KEY,
+});
+
 
 const port = process.env.PORT || 8085;
 const http = require("http");
@@ -14,6 +22,7 @@ const config = {
     "http://localhost:5173",
     "http://localhost:5174",
     "https://eco-smart-bins.netlify.app",
+    "https://ecosmart-bins.netlify.app",
   ],
 
   credentials: true,
@@ -68,6 +77,8 @@ const dbConnect = async () => {
     const serviceDetailsChart = ecoSmartBins.collection("serviceDetailsChart");
     const orderCollection = ecoSmartBins.collection("orders");
     const notification = ecoSmartBins.collection("notification");
+    const careerCollection = ecoSmartBins.collection("career");
+    const subscriberCollection = ecoSmartBins.collection("subscriber");
 
     //this code for socketIo
 
@@ -346,11 +357,19 @@ const dbConnect = async () => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await products.findOne(filter);
+
       const query = {
         _id: { $not: { $eq: new ObjectId(id) } },
         category: result?.category,
       };
       const find = await products.find(query).toArray();
+
+      const qurey = {
+        _id: { $not: { $eq: new ObjectId(id) } },
+        category: result?.category,
+      };
+      const find = await products.find(qurey).toArray();
+
       res.send({ details: result, category: find });
     });
 
@@ -499,6 +518,30 @@ const dbConnect = async () => {
       res.send(result);
     });
 
+    // subscriber 
+    app.post("/subscribe", async (req, res) => {
+      const subscriber = req.body;
+      const result = await subscriberCollection.insertOne(subscriber);
+      res.send(result);
+
+       //  send subscriber email  
+    mg.messages
+    .create(process.env.MAIL_SENDING_DOMAIN, {
+      from: "Mailgun Sandbox <postmaster@sandbox46554d9e079740e1a0ba77a562348465.mailgun.org>",
+      to: ["rawshanara.eity@gmail.com"],
+      subject: "Hello,EcoSmartBins subscription confrimation",
+      text: "Testing some Mailgun awesomness!",
+          html: `
+          <div>
+          <h2>Thank you for your subscription</h2>
+          <p>Wellcome to our EcoSmartBins For a cleaner plannet</p>
+          </div>
+          `
+    })
+    .then(msg => console.log(msg)) // logs response data
+    .catch(err => console.log(err));
+    });
+
     //pickUp get data
     app.get("/pickupReq", async (req, res) => {
       const result = await pickupReq.find().sort({ date: -1 }).toArray();
@@ -599,6 +642,19 @@ const dbConnect = async () => {
 
     app.get("/artworks", async (req, res) => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
+      res.send(result);
+    });
+
+    // career
+    app.get("/career", async (req, res) => {
+      const data = await careerCollection.find().toArray();
+      res.send(data);
+    });
+
+    app.get("/career/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await careerCollection.findOne(filter);
       res.send(result);
     });
 
