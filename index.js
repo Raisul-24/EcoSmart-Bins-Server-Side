@@ -302,23 +302,24 @@ const dbConnect = async () => {
     app.get("/products", async (req, res) => {
       const page = parseInt(req?.query?.Page);
       const size = parseInt(req.query.size);
-      let qurey = {};
+      console.log(page, size);
+      let query = {};
       if (req.query.category?.length > 0) {
-        qurey = { category: req.query.category };
+        query = { category: req.query.category };
       }
       if (req.query.search?.length > 0) {
-        qurey = {
+        query = {
           title: { $regex: req.query.search, $options: "i" },
         };
       }
       if (req.query.search?.length > 0 && req.query.category?.length > 0) {
-        qurey = {
+        query = {
           title: { $regex: req.query.search, $options: "i" },
           category: req.query.category,
         };
       }
       const data = await products
-        .find(qurey)
+        .find(query)
         .skip(page * size)
         .limit(size)
         .toArray();
@@ -356,11 +357,19 @@ const dbConnect = async () => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await products.findOne(filter);
+
+      const query = {
+        _id: { $not: { $eq: new ObjectId(id) } },
+        category: result?.category,
+      };
+      const find = await products.find(query).toArray();
+
       const qurey = {
         _id: { $not: { $eq: new ObjectId(id) } },
         category: result?.category,
       };
       const find = await products.find(qurey).toArray();
+
       res.send({ details: result, category: find });
     });
 
@@ -444,24 +453,41 @@ const dbConnect = async () => {
 
     //blogs all data
     app.get("/blogs", async (req, res) => {
-      let qurey = {};
-      if (req.query.category?.length > 0) {
-        qurey = { category: req.query.category };
-      }
-      if (req.query.search?.length > 0) {
-        qurey = {
-          name: { $regex: req.query.search, $options: "i" },
-        };
-      }
+      const page = parseInt(req?.query?.page);
+      const size = parseInt(req.query.size);
+
+      let query = {};
+
       if (req.query.search?.length > 0 && req.query.category?.length > 0) {
-        qurey = {
-          name: { $regex: req.query.search, $options: "i" },
-          category: req.query.category,
+        query = {
+          $and: [
+            { name: { $regex: req.query.search, $options: "i" } },
+            { category: req.query.category },
+          ],
         };
+      } else if (req.query.search?.length > 0) {
+        query = {
+          name: { $regex: req.query.search, $options: "i" },
+        };
+      } else if (req.query.category?.length > 0) {
+        query = { category: req.query.category };
       }
-      const data = await blogs.find(qurey).toArray();
+
+      const data = await blogs
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+
       res.send(data);
     });
+
+    //total blogs count
+    app.get("/total-blogs", async (req, res) => {
+      const data = await blogs.estimatedDocumentCount();
+      res.send({ count: data });
+    });
+
     app.get("/blogsCategory", async (req, res) => {
       const data = await blogs.find().toArray();
       const shopCategory = [];
