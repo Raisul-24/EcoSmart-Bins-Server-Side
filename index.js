@@ -625,6 +625,13 @@ const dbConnect = async () => {
       res.send(data);
     });
 
+    app.get("/career/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await careerCollection.findOne(filter);
+      res.send(result);
+    });
+
     // payment
 
     app.get("/order", async (req, res) => {
