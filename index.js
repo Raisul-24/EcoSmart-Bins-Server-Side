@@ -364,13 +364,6 @@ const dbConnect = async () => {
         category: result?.category,
       };
       const find = await products.find(query).toArray();
-
-      const qurey = {
-        _id: { $not: { $eq: new ObjectId(id) } },
-        category: result?.category,
-      };
-      const find = await products.find(qurey).toArray();
-
       res.send({ details: result, category: find });
     });
 
@@ -656,12 +649,19 @@ const dbConnect = async () => {
     app.post("/application", async (req, res) => {
       const data = req.body;
       const applyData = await application.insertOne(data);
-      res.send(productData);
+      res.send(applyData);
     });
 
     app.get("/application", async (req, res) => {
       const data = await application.find().toArray();
       res.send(data);
+    });
+
+    app.delete("/application/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deleteData = await application.deleteOne(query);
+      res.send(deleteData);
     });
 
     app.get("/career/:id", async (req, res) => {
