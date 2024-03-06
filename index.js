@@ -5,6 +5,14 @@ const cors = require("cors");
 const SSLCommerzPayment = require("sslcommerz-lts");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAIL_GUN_API_KEY,
+});
+
 
 const port = process.env.PORT || 8085;
 const http = require("http");
@@ -73,6 +81,9 @@ const dbConnect = async () => {
     const serviceDetailsChart = ecoSmartBins.collection("serviceDetailsChart");
     const orderCollection = ecoSmartBins.collection("orders");
     const notification = ecoSmartBins.collection("notification");
+    const careerCollection = ecoSmartBins.collection("career");
+    const application = ecoSmartBins.collection("application");
+    const subscriberCollection = ecoSmartBins.collection("subscriber");
 
     //this code for socketIo
 
@@ -296,23 +307,24 @@ const dbConnect = async () => {
     app.get("/products", async (req, res) => {
       const page = parseInt(req?.query?.Page);
       const size = parseInt(req.query.size);
-      let qurey = {};
+      console.log(page, size);
+      let query = {};
       if (req.query.category?.length > 0) {
-        qurey = { category: req.query.category };
+        query = { category: req.query.category };
       }
       if (req.query.search?.length > 0) {
-        qurey = {
+        query = {
           title: { $regex: req.query.search, $options: "i" },
         };
       }
       if (req.query.search?.length > 0 && req.query.category?.length > 0) {
-        qurey = {
+        query = {
           title: { $regex: req.query.search, $options: "i" },
           category: req.query.category,
         };
       }
       const data = await products
-        .find(qurey)
+        .find(query)
         .skip(page * size)
         .limit(size)
         .toArray();
@@ -350,11 +362,12 @@ const dbConnect = async () => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await products.findOne(filter);
-      const qurey = {
+
+      const query = {
         _id: { $not: { $eq: new ObjectId(id) } },
         category: result?.category,
       };
-      const find = await products.find(qurey).toArray();
+      const find = await products.find(query).toArray();
       res.send({ details: result, category: find });
     });
 
@@ -438,24 +451,41 @@ const dbConnect = async () => {
 
     //blogs all data
     app.get("/blogs", async (req, res) => {
-      let qurey = {};
-      if (req.query.category?.length > 0) {
-        qurey = { category: req.query.category };
-      }
-      if (req.query.search?.length > 0) {
-        qurey = {
-          name: { $regex: req.query.search, $options: "i" },
-        };
-      }
+      const page = parseInt(req?.query?.page);
+      const size = parseInt(req.query.size);
+
+      let query = {};
+
       if (req.query.search?.length > 0 && req.query.category?.length > 0) {
-        qurey = {
-          name: { $regex: req.query.search, $options: "i" },
-          category: req.query.category,
+        query = {
+          $and: [
+            { name: { $regex: req.query.search, $options: "i" } },
+            { category: req.query.category },
+          ],
         };
+      } else if (req.query.search?.length > 0) {
+        query = {
+          name: { $regex: req.query.search, $options: "i" },
+        };
+      } else if (req.query.category?.length > 0) {
+        query = { category: req.query.category };
       }
-      const data = await blogs.find(qurey).toArray();
+
+      const data = await blogs
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+
       res.send(data);
     });
+
+    //total blogs count
+    app.get("/total-blogs", async (req, res) => {
+      const data = await blogs.estimatedDocumentCount();
+      res.send({ count: data });
+    });
+
     app.get("/blogsCategory", async (req, res) => {
       const data = await blogs.find().toArray();
       const shopCategory = [];
@@ -484,6 +514,30 @@ const dbConnect = async () => {
     app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
+    });
+
+    // subscriber 
+    app.post("/subscribe", async (req, res) => {
+      const subscriber = req.body;
+      const result = await subscriberCollection.insertOne(subscriber);
+      res.send(result);
+
+       //  send subscriber email  
+    mg.messages
+    .create(process.env.MAIL_SENDING_DOMAIN, {
+      from: "Mailgun Sandbox <postmaster@sandbox46554d9e079740e1a0ba77a562348465.mailgun.org>",
+      to: ["rawshanara.eity@gmail.com"],
+      subject: "Hello,EcoSmartBins subscription confrimation",
+      text: "Testing some Mailgun awesomness!",
+          html: `
+          <div>
+          <h2>Thank you for your subscription</h2>
+          <p>Wellcome to our EcoSmartBins For a cleaner plannet</p>
+          </div>
+          `
+    })
+    .then(msg => console.log(msg)) // logs response data
+    .catch(err => console.log(err));
     });
 
     //pickUp get data
@@ -586,6 +640,38 @@ const dbConnect = async () => {
 
     app.get("/artworks", async (req, res) => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
+      res.send(result);
+    });
+
+    // career
+    app.get("/career", async (req, res) => {
+      const data = await careerCollection.find().toArray();
+      res.send(data);
+    });
+
+    // application
+    app.post("/application", async (req, res) => {
+      const data = req.body;
+      const applyData = await application.insertOne(data);
+      res.send(applyData);
+    });
+
+    app.get("/application", async (req, res) => {
+      const data = await application.find().toArray();
+      res.send(data);
+    });
+
+    app.delete("/application/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deleteData = await application.deleteOne(query);
+      res.send(deleteData);
+    });
+
+    app.get("/career/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await careerCollection.findOne(filter);
       res.send(result);
     });
 
