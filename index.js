@@ -27,13 +27,17 @@ const io = socketIO(server, {
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
+const dev = false;
 
 // client side server url
-const clientSideUrl = "https://eco-smart-bins.netlify.app";
+const clientSideUrl = dev
+  ? "http://localhost:5173"
+  : "https://eco-smart-bins.netlify.app";
 
 // server side server url
-// const serverSideUrl = "https://eco-smart-bin.vercel.app";
-const serverSideUrl = "https://ecosmart-bins-server-side.onrender.com";
+const serverSideUrl = dev
+  ? "http://localhost:8085"
+  : "https://ecosmart-bins-server-side.onrender.com";
 // middleware
 app.use(cors(config));
 app.use(express.json());
@@ -676,6 +680,75 @@ const dbConnect = async () => {
         if (result.deletedCount) {
           res.redirect(``);
         }
+      });
+    });
+    app.patch("/subscription", async (req, res) => {
+      const transaction_id = new ObjectId().toString();
+      const subscription = req.body;
+      // payable data store in mngo db
+      const data = {
+        total_amount: subscription?.price,
+        currency: "BDT",
+        tran_id: transaction_id, // use unique tran_id for each api call
+        success_url: `${serverSideUrl}/subscription/success/${transaction_id}`,
+        fail_url: `${serverSideUrl}/subscription/fail/${transaction_id}`,
+        cancel_url: "http://localhost:3030/cancel",
+        ipn_url: "http://localhost:3030/ipn",
+        shipping_method: "Courier",
+        product_name: "null",
+        product_category: subscription?.status,
+        product_profile: "general",
+        cus_name: subscription?.name,
+        cus_email: subscription?.email,
+        cus_add1: "null",
+        cus_add2: "null",
+        cus_city: "Dhaka",
+        cus_state: "Dhaka",
+        cus_postcode: "1000",
+        cus_country: "Bangladesh",
+        cus_phone: "01711111111",
+        cus_fax: "01711111111",
+        ship_name: "null",
+        ship_add1: "null",
+        ship_add2: "null",
+        ship_city: "Dhaka",
+        ship_state: "Dhaka",
+        ship_postcode: 1000,
+        ship_country: "Bangladesh",
+      };
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
+      sslcz.init(data).then((apiResponse) => {
+        // Redirect the user to payment gateway
+        let GatewayPageURL = apiResponse.GatewayPageURL;
+        res.send({ url: GatewayPageURL });
+        console.log("Redirecting to: ", GatewayPageURL);
+      });
+      app.post("/subscription/success/:transaction_id", async (req, res) => {
+        const filter = { email: subscription?.email };
+        const update = {
+          $set: {
+            status: subscription?.status,
+            subscriptionTime: subscription?.subscriptionTime,
+          },
+        };
+        const options = { upsert: true };
+        const result = await users.updateOne(filter, update, options);
+        res.redirect(
+          `${clientSideUrl}/payment/success/${req.params.transaction_id}`
+        );
+      });
+
+      app.post("/subscription/fail/:transaction_id", async (req, res) => {
+        const filter = { email: subscription?.email };
+        const update = {
+          $set: {
+            status: null,
+            subscriptionTime: null,
+          },
+        };
+        const options = { upsert: true };
+        const result = await users.updateOne(filter, update, options);
+        res.redirect(`/`);
       });
     });
 
