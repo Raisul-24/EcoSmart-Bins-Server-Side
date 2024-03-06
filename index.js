@@ -545,6 +545,15 @@ const dbConnect = async () => {
       const result = await pickupReq.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
+
+      // get data based on user email
+    app.get("/pickupReq/:email", async (req, res) => {
+    const userEmail = req.params.email;
+    const query = {email:userEmail};
+    const result = await pickupReq.find(query).toArray();   
+    res.send(result)  
+});
+
     //get all pickup data
     app.get("/pickupReqAll", async (req, res) => {
       const result = await pickupReq
@@ -553,6 +562,8 @@ const dbConnect = async () => {
         .toArray();
       res.send(result);
     });
+
+
     //update worker
     app.patch("/pickupReq/:id", async (req, res) => {
       const id = req.params.id;
