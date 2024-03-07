@@ -1,3 +1,35 @@
+#### Eco Smart Bins
+The Eco Smart Bins project aims to develop a Smart Waste Management System website, leveraging modern technologies to enhance waste collection efficiency, promote recycling, and provide an interactive platform for residents, waste management staff, and administrators.
+
+
+#### To see the website EcoSmart Bins
+# Development Site: https://ecosmart-bins-server-side.onrender.com
+
+
+The Eco Smart Bins project is a server-side application built using Node.js and Express.js, designed to manage and control eco-friendly smart waste bins. The project utilizes various npm packages to achieve its functionality:
+
+1. **cors**: This package enables Cross-Origin Resource Sharing (CORS) to allow communication between the server and clients from different origins securely.
+
+2. **dotenv**: dotenv is used for loading environment variables from a .env file into process.env, allowing configuration settings to be kept separate from code and easily managed.
+
+3. **express**: Express.js is a popular web application framework for Node.js, utilized in this project for handling HTTP requests, routing, and middleware.
+
+4. **form-data**: form-data is a library for creating form data objects, which is useful for sending form-encoded data in HTTP requests.
+
+5. **jsonwebtoken**: This package is used for generating and verifying JSON Web Tokens (JWTs), enabling secure authentication and authorization mechanisms in the application.
+
+6. **mailgun.js**: mailgun.js is a client library for the Mailgun email service, used for sending transactional emails such as notifications and alerts from the application.
+
+7. **mongodb**: MongoDB is a NoSQL database used in this project for storing and managing data related to smart waste bins, users, and other application entities.
+
+8. **recharts**: Recharts is a charting library for React applications, utilized for generating dynamic and interactive charts such as line charts and pie charts to visualize data.
+
+9. **socket.io**: socket.io is a library for enabling real-time bidirectional communication between clients and servers using WebSockets. It is used in this project for implementing real-time features such as live updates and notifications.
+
+10. **sslcommerz-lts**: sslcommerz-lts is a package for integrating SSLCommerz, a payment gateway service, into the application for handling secure online payments.
+
+Overall, the Eco Smart Bins project leverages these npm packages to create a robust and feature-rich server-side application for managing eco-friendly smart waste bins, providing functionalities such as authentication, data storage, real-time communication, and visualization of data through charts.
+
 #### Run the project Process
 
 ## Guidelines
