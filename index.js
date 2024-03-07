@@ -5,14 +5,13 @@ const cors = require("cors");
 const SSLCommerzPayment = require("sslcommerz-lts");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-const formData = require('form-data');
-const Mailgun = require('mailgun.js');
+const formData = require("form-data");
+const Mailgun = require("mailgun.js");
 const mailgun = new Mailgun(formData);
 const mg = mailgun.client({
-    username: 'api',
-    key: process.env.MAIL_GUN_API_KEY,
+  username: "api",
+  key: process.env.MAIL_GUN_API_KEY,
 });
-
 
 const port = process.env.PORT || 8085;
 const http = require("http");
@@ -35,7 +34,7 @@ const io = socketIO(server, {
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
-const dev = false;
+const dev = true;
 
 // client side server url
 const clientSideUrl = dev
@@ -516,28 +515,28 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-    // subscriber 
+    // subscriber
     app.post("/subscribe", async (req, res) => {
       const subscriber = req.body;
       const result = await subscriberCollection.insertOne(subscriber);
       res.send(result);
 
-       //  send subscriber email  
-    mg.messages
-    .create(process.env.MAIL_SENDING_DOMAIN, {
-      from: "Mailgun Sandbox <postmaster@sandbox46554d9e079740e1a0ba77a562348465.mailgun.org>",
-      to: ["rawshanara.eity@gmail.com"],
-      subject: "Hello,EcoSmartBins subscription confrimation",
-      text: "Testing some Mailgun awesomness!",
+      //  send subscriber email
+      mg.messages
+        .create(process.env.MAIL_SENDING_DOMAIN, {
+          from: "Mailgun Sandbox <postmaster@sandbox46554d9e079740e1a0ba77a562348465.mailgun.org>",
+          to: ["rawshanara.eity@gmail.com"],
+          subject: "Hello,EcoSmartBins subscription confrimation",
+          text: "Testing some Mailgun awesomness!",
           html: `
           <div>
           <h2>Thank you for your subscription</h2>
           <p>Wellcome to our EcoSmartBins For a cleaner plannet</p>
           </div>
-          `
-    })
-    .then(msg => console.log(msg)) // logs response data
-    .catch(err => console.log(err));
+          `,
+        })
+        .then((msg) => console.log(msg)) // logs response data
+        .catch((err) => console.log(err));
     });
 
     //pickUp get data
@@ -546,13 +545,13 @@ const dbConnect = async () => {
       res.send(result);
     });
 
-      // get data based on user email
+    // get data based on user email
     app.get("/pickupReq/:email", async (req, res) => {
-    const userEmail = req.params.email;
-    const query = {email:userEmail};
-    const result = await pickupReq.find(query).toArray();   
-    res.send(result)  
-});
+      const userEmail = req.params.email;
+      const query = { email: userEmail };
+      const result = await pickupReq.find(query).toArray();
+      res.send(result);
+    });
 
     //get all pickup data
     app.get("/pickupReqAll", async (req, res) => {
@@ -562,7 +561,6 @@ const dbConnect = async () => {
         .toArray();
       res.send(result);
     });
-
 
     //update worker
     app.patch("/pickupReq/:id", async (req, res) => {
@@ -783,6 +781,64 @@ const dbConnect = async () => {
         if (result.deletedCount) {
           res.redirect(``);
         }
+      });
+    });
+    app.post("/cart-order", async (req, res) => {
+      const transaction_id = new ObjectId().toString();
+      const order = req.body;
+      // payable data store in mngo db
+      const data = {
+        total_amount: order?.totalPrice,
+        currency: "BDT",
+        tran_id: transaction_id, // use unique tran_id for each api call
+        success_url: `${serverSideUrl}/cart-order/success/${transaction_id}`,
+        fail_url: `${serverSideUrl}/cart-order/fail/${transaction_id}`,
+        cancel_url: "http://localhost:3030/cancel",
+        ipn_url: "http://localhost:3030/ipn",
+        shipping_method: "Courier",
+        product_name: "null",
+        product_category: "Electronic",
+        product_profile: "general",
+        cus_name: "null",
+        cus_email: "null",
+        cus_add1: "null",
+        cus_add2: "null",
+        cus_city: "Dhaka",
+        cus_state: "Dhaka",
+        cus_postcode: "1000",
+        cus_country: "Bangladesh",
+        cus_phone: "null",
+        // cus_fax: '01711111111',
+        ship_name: "null",
+        ship_add1: "null",
+        ship_add2: "null",
+        ship_city: "Dhaka",
+        ship_state: "Dhaka",
+        ship_postcode: 1000,
+        ship_country: "Bangladesh",
+      };
+      console.log(data);
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
+      sslcz.init(data).then((apiResponse) => {
+        // Redirect the user to payment gateway
+        let GatewayPageURL = apiResponse.GatewayPageURL;
+        res.send({ url: GatewayPageURL });
+      });
+
+      app.post("/cart-order/success/:transaction_id", async (req, res) => {
+        console.log(req.params.transaction_id);
+        const result = await myCart.deleteMany({
+          email: order.email,
+        });
+        if (result.deletedCount) {
+          res.redirect(
+            `${clientSideUrl}/payment/success/${req.params.transaction_id}`
+          );
+        }
+      });
+
+      app.post("/cart-order/fail/:transaction_id", async (req, res) => {
+        res.redirect(clientSideUrl);
       });
     });
     app.patch("/subscription", async (req, res) => {
