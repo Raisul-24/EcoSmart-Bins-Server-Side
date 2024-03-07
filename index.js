@@ -22,7 +22,6 @@ const config = {
     "http://localhost:5174",
     "https://eco-smart-bins.netlify.app",
   ],
-  credentials: true,
 };
 const server = http.createServer(app);
 const io = socketIO(server, {
