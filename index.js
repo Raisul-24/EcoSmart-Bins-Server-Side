@@ -356,22 +356,46 @@ const dbConnect = async () => {
       res.send(data);
     });
     app.get("/workerOverview/:email", async (req, res) => {
-      const email = req.params.email;
+      const workerEmail = req.params.email;
       const ongoing = await pickupReq
         .find({
-          email,
+          workerEmail,
           status: "ongoing",
         })
         .toArray();
       const complete = await pickupReq
         .find({
-          email,
+          workerEmail,
           status: "complete",
         })
         .toArray();
       const data = [
         { name: "ongoing", total: ongoing?.length },
         { name: "complete", total: complete?.length },
+      ];
+      res.send(data);
+    });
+    app.get("/userOverview/:email", async (req, res) => {
+      const email = req.params.email;
+      const cart = await myCart
+        .find({
+          email,
+        })
+        .toArray();
+      const pickup = await pickupReq
+        .find({
+          email,
+        })
+        .toArray();
+      const order = await orderCollection
+        .find({
+          "payableOrder.cus_email": email,
+        })
+        .toArray();
+      const data = [
+        { name: "my cart", total: cart?.length },
+        { name: "pickupReq", total: pickup?.length },
+        { name: "order", total: order?.length },
       ];
       res.send(data);
     });
@@ -588,6 +612,14 @@ const dbConnect = async () => {
       };
       const updateData = await pickupReq.updateOne(query, updateDoc);
       res.send(updateData);
+    });
+    app.get("/userpickupReq/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await pickupReq
+        .find({ email })
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
     });
     //get data base to status
     app.get("/pickupReq/:email", async (req, res) => {
