@@ -763,7 +763,7 @@ const dbConnect = async () => {
         tran_id: transaction_id, // use unique tran_id for each api call
         success_url: `${serverSideUrl}/payment/success/${transaction_id}`,
         fail_url: `${serverSideUrl}/payment/fail/${transaction_id}`,
-        cancel_url: "http://localhost:3030/cancel",
+        cancel_url: `${serverSideUrl}/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: order?.title,
@@ -820,6 +820,12 @@ const dbConnect = async () => {
         }
       });
 
+      app.post('/payment/cancel', async(req, res) =>{
+        res.redirect(
+          `${clientSideUrl}/payment/cancel`
+        );
+      })
+
       app.post("/payment/fail/:transaction_id", async (req, res) => {
         const result = await orderCollection.deleteOne({
           transaction_ID: req.params.transaction_id,
@@ -839,7 +845,7 @@ const dbConnect = async () => {
         tran_id: transaction_id, // use unique tran_id for each api call
         success_url: `${serverSideUrl}/cart-order/success/${transaction_id}`,
         fail_url: `${serverSideUrl}/cart-order/fail/${transaction_id}`,
-        cancel_url: "http://localhost:3030/cancel",
+        cancel_url: `${clientSideUrl}/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: "null",
@@ -897,7 +903,7 @@ const dbConnect = async () => {
         tran_id: transaction_id, // use unique tran_id for each api call
         success_url: `${serverSideUrl}/subscription/success/${transaction_id}`,
         fail_url: `${serverSideUrl}/subscription/fail/${transaction_id}`,
-        cancel_url: "http://localhost:3030/cancel",
+        cancel_url: `${clientSideUrl}/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: "null",
