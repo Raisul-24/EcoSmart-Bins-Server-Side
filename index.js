@@ -356,22 +356,46 @@ const dbConnect = async () => {
       res.send(data);
     });
     app.get("/workerOverview/:email", async (req, res) => {
-      const email = req.params.email;
+      const workerEmail = req.params.email;
       const ongoing = await pickupReq
         .find({
-          email,
+          workerEmail,
           status: "ongoing",
         })
         .toArray();
       const complete = await pickupReq
         .find({
-          email,
+          workerEmail,
           status: "complete",
         })
         .toArray();
       const data = [
         { name: "ongoing", total: ongoing?.length },
         { name: "complete", total: complete?.length },
+      ];
+      res.send(data);
+    });
+    app.get("/userOverview/:email", async (req, res) => {
+      const email = req.params.email;
+      const cart = await myCart
+        .find({
+          email,
+        })
+        .toArray();
+      const pickup = await pickupReq
+        .find({
+          email,
+        })
+        .toArray();
+      const order = await orderCollection
+        .find({
+          "payableOrder.cus_email": email,
+        })
+        .toArray();
+      const data = [
+        { name: "my cart", total: cart?.length },
+        { name: "pickupReq", total: pickup?.length },
+        { name: "order", total: order?.length },
       ];
       res.send(data);
     });
@@ -589,6 +613,14 @@ const dbConnect = async () => {
       const updateData = await pickupReq.updateOne(query, updateDoc);
       res.send(updateData);
     });
+    app.get("/userpickupReq/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await pickupReq
+        .find({ email })
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
     //get data base to status
     app.get("/pickupReq/:email", async (req, res) => {
       const workerEmail = req.params.email;
@@ -731,7 +763,7 @@ const dbConnect = async () => {
         tran_id: transaction_id, // use unique tran_id for each api call
         success_url: `${serverSideUrl}/payment/success/${transaction_id}`,
         fail_url: `${serverSideUrl}/payment/fail/${transaction_id}`,
-        cancel_url: "http://localhost:3030/cancel",
+        cancel_url: `${serverSideUrl}/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: order?.title,
@@ -788,6 +820,12 @@ const dbConnect = async () => {
         }
       });
 
+      app.post('/payment/cancel', async(req, res) =>{
+        res.redirect(
+          `${clientSideUrl}/payment/cancel`
+        );
+      })
+
       app.post("/payment/fail/:transaction_id", async (req, res) => {
         const result = await orderCollection.deleteOne({
           transaction_ID: req.params.transaction_id,
@@ -807,7 +845,7 @@ const dbConnect = async () => {
         tran_id: transaction_id, // use unique tran_id for each api call
         success_url: `${serverSideUrl}/cart-order/success/${transaction_id}`,
         fail_url: `${serverSideUrl}/cart-order/fail/${transaction_id}`,
-        cancel_url: "http://localhost:3030/cancel",
+        cancel_url: `${clientSideUrl}/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: "null",
@@ -865,7 +903,7 @@ const dbConnect = async () => {
         tran_id: transaction_id, // use unique tran_id for each api call
         success_url: `${serverSideUrl}/subscription/success/${transaction_id}`,
         fail_url: `${serverSideUrl}/subscription/fail/${transaction_id}`,
-        cancel_url: "http://localhost:3030/cancel",
+        cancel_url: `${clientSideUrl}/payment/cancel`,
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: "null",
