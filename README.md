@@ -56,6 +56,8 @@ Overall, the Eco Smart Bins project leverages these npm packages to create a rob
    MICROSOFT_APP_PASSWORD=YfJ8Q~9qlvcPj-zxlvgSrs.jMpgU1oOu~E4viaCe
    STORE_ID=cdjkj65ca36cc656de
    STORE_PASSWORD=cdjkj65ca36cc656de@ssl
+   MAIL_GUN_API_KEY=30bdeaca6705ac037002348a364dbe66-2c441066-bfea4420
+   MAIL_SENDING_DOMAIN=sandbox46554d9e079740e1a0ba77a562348465.mailgun.org
    ```
 4. **Run the project:** For run this project need to run this command
    ```
