@@ -5,13 +5,13 @@ const cors = require("cors");
 const SSLCommerzPayment = require("sslcommerz-lts");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-const formData = require("form-data");
-const Mailgun = require("mailgun.js");
-const mailgun = new Mailgun(formData);
-const mg = mailgun.client({
-  username: "api",
-  key: process.env.MAIL_GUN_API_KEY,
-});
+// const formData = require("form-data");
+// const Mailgun = require("mailgun.js");
+// const mailgun = new Mailgun(formData);
+// const mg = mailgun.client({
+//   username: "api",
+//   key: process.env.MAIL_GUN_API_KEY,
+// });
 
 const port = process.env.PORT || 8085;
 const http = require("http");
@@ -564,21 +564,21 @@ const dbConnect = async () => {
       res.send(result);
 
       //  send subscriber email
-      mg.messages
-        .create(process.env.MAIL_SENDING_DOMAIN, {
-          from: "Mailgun Sandbox <postmaster@sandbox46554d9e079740e1a0ba77a562348465.mailgun.org>",
-          to: ["rawshanara.eity@gmail.com"],
-          subject: "Hello,EcoSmartBins subscription confrimation",
-          text: "Testing some Mailgun awesomness!",
-          html: `
-          <div>
-          <h2>Thank you for your subscription</h2>
-          <p>Wellcome to our EcoSmartBins For a cleaner plannet</p>
-          </div>
-          `,
-        })
-        .then((msg) => console.log(msg)) // logs response data
-        .catch((err) => console.log(err));
+      // mg.messages
+      //   .create(process.env.MAIL_SENDING_DOMAIN, {
+      //     from: "Mailgun Sandbox <postmaster@sandbox46554d9e079740e1a0ba77a562348465.mailgun.org>",
+      //     to: ["rawshanara.eity@gmail.com"],
+      //     subject: "Hello,EcoSmartBins subscription confrimation",
+      //     text: "Testing some Mailgun awesomness!",
+      //     html: `
+      //     <div>
+      //     <h2>Thank you for your subscription</h2>
+      //     <p>Wellcome to our EcoSmartBins For a cleaner plannet</p>
+      //     </div>
+      //     `,
+      //   })
+      //   .then((msg) => console.log(msg)) // logs response data
+      //   .catch((err) => console.log(err));
     });
 
     //pickUp get data
