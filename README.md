@@ -6,6 +6,7 @@ The Eco Smart Bins project aims to develop a Smart Waste Management System websi
 # Development Site: https://ecosmart-bins-server-side.onrender.com
 
 
+# Frameworks and Libraries:
 The Eco Smart Bins project is a server-side application built using Node.js and Express.js, designed to manage and control eco-friendly smart waste bins. The project utilizes various npm packages to achieve its functionality:
 
 1. **cors**: This package enables Cross-Origin Resource Sharing (CORS) to allow communication between the server and clients from different origins securely.
