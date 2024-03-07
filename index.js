@@ -5,36 +5,48 @@ const cors = require("cors");
 const SSLCommerzPayment = require("sslcommerz-lts");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+const formData = require("form-data");
+const Mailgun = require("mailgun.js");
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+  username: "api",
+  key: process.env.MAIL_GUN_API_KEY,
+});
 
 const port = process.env.PORT || 8085;
 const http = require("http");
 const socketIO = require("socket.io");
-const { count } = require("console");
+const config = {
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://eco-smart-bins.netlify.app",
+    "https://ecosmart-bins.netlify.app",
+  ],
 
+  credentials: true,
+};
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIO(server, {
+  cors: config,
+});
 // ssl
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
+const dev = false;
 
 // client side server url
-const clientSideUrl = "https://eco-smart-bins.netlify.app";
+const clientSideUrl = dev
+  ? "http://localhost:5173"
+  : "https://eco-smart-bins.netlify.app";
 
 // server side server url
-const serverSideUrl = "https://eco-smart-bin.vercel.app";
+const serverSideUrl = dev
+  ? "http://localhost:8085"
+  : "https://ecosmart-bins-server-side.onrender.com";
 // middleware
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://eco-smart-bins.netlify.app",
-    ],
-
-    credentials: true,
-  })
-);
+app.use(cors(config));
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.axstdh0.mongodb.net/?retryWrites=true&w=majority`;
@@ -63,7 +75,14 @@ const dbConnect = async () => {
     const artCollection = ecoSmartBins.collection("artworks");
     const pickupReq = ecoSmartBins.collection("pickupReq");
     const team = ecoSmartBins.collection("teams");
+    const industries = ecoSmartBins.collection("industries");
+    const industriesCategory = ecoSmartBins.collection("industriesCategory");
+    const serviceDetailsChart = ecoSmartBins.collection("serviceDetailsChart");
     const orderCollection = ecoSmartBins.collection("orders");
+    const notification = ecoSmartBins.collection("notification");
+    const careerCollection = ecoSmartBins.collection("career");
+    const application = ecoSmartBins.collection("application");
+    const subscriberCollection = ecoSmartBins.collection("subscriber");
 
     //this code for socketIo
 
@@ -88,10 +107,24 @@ const dbConnect = async () => {
 
     io.on("connection", (socket) => {
       console.log("A user is connected");
-
+      //add user
       socket.on("addUser", (userId) => {
         addUser(userId, socket.id);
-        io.emit("getUsers", ioUsers);
+        io.emit("getUsers", "wellcome");
+      });
+      //notification
+      socket.on("notification", async (data) => {
+        const { email, type, sentData } = data;
+        if (type === "sent") {
+          await notification.insertOne(sentData);
+        }
+        const query = { email };
+        const find = await notification
+          .find(query)
+          .sort({ date: -1 })
+          .limit(20)
+          .toArray();
+        io.emit("receive-notification", find);
       });
 
       // Handle other socket events...
@@ -99,7 +132,6 @@ const dbConnect = async () => {
       socket.on("disconnect", () => {
         console.log("A user disconnected!");
         removeUser(socket.id);
-        io.emit("getUsers", ioUsers);
       });
     });
 
@@ -164,9 +196,9 @@ const dbConnect = async () => {
         if (req.query?.email) {
           query = { email: req.query.email };
         }
-        //console.log(query);
+        // console.log(query);
         const result = await myCart.find(query).toArray();
-        //console.log(result);
+        // console.log(result);
         res.json(result);
       } catch (error) {
         console.error(error);
@@ -174,9 +206,33 @@ const dbConnect = async () => {
       }
     });
 
-    // get all teams
+    // get all category of industries
+    app.get("/industries-category", async (req, res) => {
+      const result = await industriesCategory.find().toArray();
+      res.send(result);
+    });
+    // get all industries
+    app.get("/industries", async (req, res) => {
+      const result = await industries.find().toArray();
+      res.send(result);
+    });
+
+    //service a data by id
+    app.get("/industry/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const data = await industries.findOne(query);
+      res.send(data);
+    });
+
     app.get("/team", async (req, res) => {
       const result = await team.find().toArray();
+      res.send(result);
+    });
+
+    // get chart for serviceDetails
+    app.get("/serviceDetails-chart", async (req, res) => {
+      const result = await serviceDetailsChart.find().toArray();
       res.send(result);
     });
 
@@ -229,7 +285,14 @@ const dbConnect = async () => {
     // get cart data for my cart page
     app.post("/my-cart", async (req, res) => {
       const item = req.body;
+      console.log(item);
       const result = await myCart.insertOne(item);
+      res.send(result);
+    });
+    app.delete("/my-cart/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await myCart.deleteOne(query);
       res.send(result);
     });
 
@@ -243,23 +306,24 @@ const dbConnect = async () => {
     app.get("/products", async (req, res) => {
       const page = parseInt(req?.query?.Page);
       const size = parseInt(req.query.size);
-      let qurey = {};
+      console.log(page, size);
+      let query = {};
       if (req.query.category?.length > 0) {
-        qurey = { category: req.query.category };
+        query = { category: req.query.category };
       }
       if (req.query.search?.length > 0) {
-        qurey = {
+        query = {
           title: { $regex: req.query.search, $options: "i" },
         };
       }
       if (req.query.search?.length > 0 && req.query.category?.length > 0) {
-        qurey = {
+        query = {
           title: { $regex: req.query.search, $options: "i" },
           category: req.query.category,
         };
       }
       const data = await products
-        .find(qurey)
+        .find(query)
         .skip(page * size)
         .limit(size)
         .toArray();
@@ -280,7 +344,7 @@ const dbConnect = async () => {
       res.send({ count: data });
     });
 
-    app.get("/DashboardOverview", async (req, res) => {
+    app.get("/adminOverview", async (req, res) => {
       const service = await services.estimatedDocumentCount();
       const user = await users.estimatedDocumentCount();
       const product = await products.estimatedDocumentCount();
@@ -291,13 +355,39 @@ const dbConnect = async () => {
       ];
       res.send(data);
     });
+    app.get("/workerOverview/:email", async (req, res) => {
+      const email = req.params.email;
+      const ongoing = await pickupReq
+        .find({
+          email,
+          status: "ongoing",
+        })
+        .toArray();
+      const complete = await pickupReq
+        .find({
+          email,
+          status: "complete",
+        })
+        .toArray();
+      const data = [
+        { name: "ongoing", total: ongoing?.length },
+        { name: "complete", total: complete?.length },
+      ];
+      res.send(data);
+    });
 
     // single product data for shop page
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await products.findOne(filter);
-      res.send(result);
+
+      const query = {
+        _id: { $not: { $eq: new ObjectId(id) } },
+        category: result?.category,
+      };
+      const find = await products.find(query).toArray();
+      res.send({ details: result, category: find });
     });
 
     //update a product
@@ -345,6 +435,7 @@ const dbConnect = async () => {
       const data = await services.findOne(query);
       res.send(data);
     });
+
     //service add new data
     app.post("/services", async (req, res) => {
       const data = req.body;
@@ -379,24 +470,41 @@ const dbConnect = async () => {
 
     //blogs all data
     app.get("/blogs", async (req, res) => {
-      let qurey = {};
-      if (req.query.category?.length > 0) {
-        qurey = { category: req.query.category };
-      }
-      if (req.query.search?.length > 0) {
-        qurey = {
-          name: { $regex: req.query.search, $options: "i" },
-        };
-      }
+      const page = parseInt(req?.query?.page);
+      const size = parseInt(req.query.size);
+
+      let query = {};
+
       if (req.query.search?.length > 0 && req.query.category?.length > 0) {
-        qurey = {
-          name: { $regex: req.query.search, $options: "i" },
-          category: req.query.category,
+        query = {
+          $and: [
+            { name: { $regex: req.query.search, $options: "i" } },
+            { category: req.query.category },
+          ],
         };
+      } else if (req.query.search?.length > 0) {
+        query = {
+          name: { $regex: req.query.search, $options: "i" },
+        };
+      } else if (req.query.category?.length > 0) {
+        query = { category: req.query.category };
       }
-      const data = await blogs.find(qurey).toArray();
+
+      const data = await blogs
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+
       res.send(data);
     });
+
+    //total blogs count
+    app.get("/total-blogs", async (req, res) => {
+      const data = await blogs.estimatedDocumentCount();
+      res.send({ count: data });
+    });
+
     app.get("/blogsCategory", async (req, res) => {
       const data = await blogs.find().toArray();
       const shopCategory = [];
@@ -427,11 +535,38 @@ const dbConnect = async () => {
       res.send(result);
     });
 
+    // subscriber
+    app.post("/subscribe", async (req, res) => {
+      const subscriber = req.body;
+      const result = await subscriberCollection.insertOne(subscriber);
+      res.send(result);
+
+      //  send subscriber email
+      mg.messages
+        .create(process.env.MAIL_SENDING_DOMAIN, {
+          from: "Mailgun Sandbox <postmaster@sandbox46554d9e079740e1a0ba77a562348465.mailgun.org>",
+          to: ["rawshanara.eity@gmail.com"],
+          subject: "Hello,EcoSmartBins subscription confrimation",
+          text: "Testing some Mailgun awesomness!",
+          html: `
+          <div>
+          <h2>Thank you for your subscription</h2>
+          <p>Wellcome to our EcoSmartBins For a cleaner plannet</p>
+          </div>
+          `,
+        })
+        .then((msg) => console.log(msg)) // logs response data
+        .catch((err) => console.log(err));
+    });
+
     //pickUp get data
     app.get("/pickupReq", async (req, res) => {
       const result = await pickupReq.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
+
+    // get data based on user email
+
     //get all pickup data
     app.get("/pickupReqAll", async (req, res) => {
       const result = await pickupReq
@@ -440,6 +575,7 @@ const dbConnect = async () => {
         .toArray();
       res.send(result);
     });
+
     //update worker
     app.patch("/pickupReq/:id", async (req, res) => {
       const id = req.params.id;
@@ -480,8 +616,9 @@ const dbConnect = async () => {
     app.post("/pickupReq", async (req, res) => {
       const data = req.body;
       // console.log(data);
-      const query = { email: data?.email };
+      const query = { email: data?.email, status: "ongoing" };
       const isExist = await pickupReq.findOne(query);
+      console.log(isExist);
       if (isExist) {
         return res.send({
           message: "request already exists",
@@ -528,7 +665,52 @@ const dbConnect = async () => {
       const result = await artCollection.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
+
+    // career
+    app.get("/career", async (req, res) => {
+      const data = await careerCollection.find().toArray();
+      res.send(data);
+    });
+
+    app.post("/career", async (req, res) => {
+      const data = req.body;
+      const jobData = await careerCollection.insertOne(data);
+      res.send(jobData);
+    });
+
+    // application
+    app.post("/application", async (req, res) => {
+      const data = req.body;
+      const applyData = await application.insertOne(data);
+      res.send(applyData);
+    });
+
+    app.get("/application", async (req, res) => {
+      const data = await application.find().toArray();
+      res.send(data);
+    });
+
+    app.delete("/application/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const deleteData = await application.deleteOne(query);
+      res.send(deleteData);
+    });
+
+    app.get("/career/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await careerCollection.findOne(filter);
+      res.send(result);
+    });
+
     // payment
+
+    app.get("/order", async (req, res) => {
+      const result = await orderCollection.find().toArray();
+      res.send(result);
+    });
+
     app.post("/order", async (req, res) => {
       const transaction_id = new ObjectId().toString();
       const order = req.body;
@@ -615,6 +797,133 @@ const dbConnect = async () => {
         }
       });
     });
+    app.post("/cart-order", async (req, res) => {
+      const transaction_id = new ObjectId().toString();
+      const order = req.body;
+      // payable data store in mngo db
+      const data = {
+        total_amount: order?.totalPrice,
+        currency: "BDT",
+        tran_id: transaction_id, // use unique tran_id for each api call
+        success_url: `${serverSideUrl}/cart-order/success/${transaction_id}`,
+        fail_url: `${serverSideUrl}/cart-order/fail/${transaction_id}`,
+        cancel_url: "http://localhost:3030/cancel",
+        ipn_url: "http://localhost:3030/ipn",
+        shipping_method: "Courier",
+        product_name: "null",
+        product_category: "Electronic",
+        product_profile: "general",
+        cus_name: "null",
+        cus_email: "null",
+        cus_add1: "null",
+        cus_add2: "null",
+        cus_city: "Dhaka",
+        cus_state: "Dhaka",
+        cus_postcode: "1000",
+        cus_country: "Bangladesh",
+        cus_phone: "null",
+        // cus_fax: '01711111111',
+        ship_name: "null",
+        ship_add1: "null",
+        ship_add2: "null",
+        ship_city: "Dhaka",
+        ship_state: "Dhaka",
+        ship_postcode: 1000,
+        ship_country: "Bangladesh",
+      };
+      console.log(data);
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
+      sslcz.init(data).then((apiResponse) => {
+        // Redirect the user to payment gateway
+        let GatewayPageURL = apiResponse.GatewayPageURL;
+        res.send({ url: GatewayPageURL });
+      });
+
+      app.post("/cart-order/success/:transaction_id", async (req, res) => {
+        console.log(req.params.transaction_id);
+        const result = await myCart.deleteMany({
+          email: order.email,
+        });
+        if (result.deletedCount) {
+          res.redirect(
+            `${clientSideUrl}/payment/success/${req.params.transaction_id}`
+          );
+        }
+      });
+
+      app.post("/cart-order/fail/:transaction_id", async (req, res) => {
+        res.redirect(clientSideUrl);
+      });
+    });
+    app.patch("/subscription", async (req, res) => {
+      const transaction_id = new ObjectId().toString();
+      const subscription = req.body;
+      // payable data store in mngo db
+      const data = {
+        total_amount: subscription?.price,
+        currency: "BDT",
+        tran_id: transaction_id, // use unique tran_id for each api call
+        success_url: `${serverSideUrl}/subscription/success/${transaction_id}`,
+        fail_url: `${serverSideUrl}/subscription/fail/${transaction_id}`,
+        cancel_url: "http://localhost:3030/cancel",
+        ipn_url: "http://localhost:3030/ipn",
+        shipping_method: "Courier",
+        product_name: "null",
+        product_category: subscription?.status,
+        product_profile: "general",
+        cus_name: subscription?.name,
+        cus_email: subscription?.email,
+        cus_add1: "null",
+        cus_add2: "null",
+        cus_city: "Dhaka",
+        cus_state: "Dhaka",
+        cus_postcode: "1000",
+        cus_country: "Bangladesh",
+        cus_phone: "01711111111",
+        cus_fax: "01711111111",
+        ship_name: "null",
+        ship_add1: "null",
+        ship_add2: "null",
+        ship_city: "Dhaka",
+        ship_state: "Dhaka",
+        ship_postcode: 1000,
+        ship_country: "Bangladesh",
+      };
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
+      sslcz.init(data).then((apiResponse) => {
+        // Redirect the user to payment gateway
+        let GatewayPageURL = apiResponse.GatewayPageURL;
+        res.send({ url: GatewayPageURL });
+        console.log("Redirecting to: ", GatewayPageURL);
+      });
+      app.post("/subscription/success/:transaction_id", async (req, res) => {
+        const filter = { email: subscription?.email };
+        const update = {
+          $set: {
+            status: subscription?.status,
+            subscriptionTime: subscription?.subscriptionTime,
+          },
+        };
+        const options = { upsert: true };
+        const result = await users.updateOne(filter, update, options);
+        res.redirect(
+          `${clientSideUrl}/payment/success/${req.params.transaction_id}`
+        );
+      });
+
+      app.post("/subscription/fail/:transaction_id", async (req, res) => {
+        const filter = { email: subscription?.email };
+        const update = {
+          $set: {
+            status: null,
+            subscriptionTime: null,
+          },
+        };
+        const options = { upsert: true };
+        const result = await users.updateOne(filter, update, options);
+        res.redirect(`/`);
+      });
+    });
 
     console.log("DB Connected Successfully✅");
   } catch (error) {
@@ -627,12 +936,6 @@ app.get("/", (req, res) => {
   res.send("EcoSmart Bins is running!!");
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-// server.listen(process.env.SOCKET_PORT || 8085, () => {
-//   console.log(
-//     `Socket server is running on port ${process.env.SOCKET_PORT || 8085}`
-//   );
-// });
