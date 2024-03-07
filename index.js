@@ -344,7 +344,7 @@ const dbConnect = async () => {
       res.send({ count: data });
     });
 
-    app.get("/DashboardOverview", async (req, res) => {
+    app.get("/adminOverview", async (req, res) => {
       const service = await services.estimatedDocumentCount();
       const user = await users.estimatedDocumentCount();
       const product = await products.estimatedDocumentCount();
@@ -352,6 +352,26 @@ const dbConnect = async () => {
         { name: "services", total: service },
         { name: "users", total: user },
         { name: "products", total: product },
+      ];
+      res.send(data);
+    });
+    app.get("/workerOverview/:email", async (req, res) => {
+      const email = req.params.email;
+      const ongoing = await pickupReq
+        .find({
+          email,
+          status: "ongoing",
+        })
+        .toArray();
+      const complete = await pickupReq
+        .find({
+          email,
+          status: "complete",
+        })
+        .toArray();
+      const data = [
+        { name: "ongoing", total: ongoing?.length },
+        { name: "complete", total: complete?.length },
       ];
       res.send(data);
     });
@@ -546,12 +566,6 @@ const dbConnect = async () => {
     });
 
     // get data based on user email
-    app.get("/pickupReq/:email", async (req, res) => {
-      const userEmail = req.params.email;
-      const query = { email: userEmail };
-      const result = await pickupReq.find(query).toArray();
-      res.send(result);
-    });
 
     //get all pickup data
     app.get("/pickupReqAll", async (req, res) => {
