@@ -660,6 +660,12 @@ const dbConnect = async () => {
       res.send(data);
     });
 
+    app.post("/career", async (req, res) => {
+      const data = req.body;
+      const jobData = await careerCollection.insertOne(data);
+      res.send(jobData);
+    });
+
     // application
     app.post("/application", async (req, res) => {
       const data = req.body;
